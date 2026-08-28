@@ -23,7 +23,7 @@ const getAllFiles = async (
       await getAllFiles(rootDir, fullPath, files);
     } else {
       files.push({
-        path: path.relative(rootDir, dir),
+        path: path.relative(rootDir, dir).replace(/\\/g, '/'),
         name: entry.name,
         content: await fs.readFile(fullPath),
       });

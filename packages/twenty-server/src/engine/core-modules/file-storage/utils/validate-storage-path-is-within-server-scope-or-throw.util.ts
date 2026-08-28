@@ -1,4 +1,4 @@
-import { join, normalize } from 'path';
+import { posix } from 'path';
 
 import { type ServerFileFolder } from 'twenty-shared/types';
 
@@ -18,10 +18,10 @@ export const validateStoragePathIsWithinServerScopeOrThrow = ({
 }): void => {
   assertStoragePathIsSafe(onStoragePath);
 
-  const expectedPrefix = join(SERVER_FILE_STORAGE_PREFIX, fileFolder);
+  const expectedPrefix = posix.join(SERVER_FILE_STORAGE_PREFIX, fileFolder);
 
-  const normalizedPath = normalize(onStoragePath);
-  const normalizedPrefix = normalize(expectedPrefix + '/');
+  const normalizedPath = posix.normalize(onStoragePath);
+  const normalizedPrefix = posix.normalize(`${expectedPrefix}/`);
 
   if (!normalizedPath.startsWith(normalizedPrefix)) {
     throw new FileStorageException(

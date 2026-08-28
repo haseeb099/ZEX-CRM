@@ -1,4 +1,4 @@
-import { join, normalize } from 'path';
+import { posix } from 'path';
 
 import { type FileFolder } from 'twenty-shared/types';
 
@@ -18,14 +18,14 @@ export const validateStoragePathIsWithinWorkspaceOrThrow = ({
   applicationUniversalIdentifier: string;
   fileFolder: FileFolder;
 }): void => {
-  const expectedPrefix = join(
+  const expectedPrefix = posix.join(
     workspaceId,
     applicationUniversalIdentifier,
     fileFolder,
   );
 
-  const normalizedPath = normalize(onStoragePath);
-  const normalizedPrefix = normalize(expectedPrefix + '/');
+  const normalizedPath = posix.normalize(onStoragePath);
+  const normalizedPrefix = posix.normalize(`${expectedPrefix}/`);
 
   if (!normalizedPath.startsWith(normalizedPrefix)) {
     throw new FileStorageException(

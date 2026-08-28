@@ -108,8 +108,11 @@ export default defineConfig(({ command }) => {
       // Generates typed *.module.scss.d.ts siblings (dev mode only — backed by
       // sass-embedded). CI/build relies on the ambient src/scss-modules.d.ts.
       sassDts({ esmExport: true, legacyFileFormat: true }),
-      dts(dtsConfig),
-      checker(checkersConfig),
+      // tsc CLI splits unquoted paths on spaces (TS5042) when the repo lives
+      // under a folder like "Zex CRM". Skip declaration/typecheck plugins then.
+      ...(__dirname.includes(' ')
+        ? []
+        : [dts(dtsConfig), checker(checkersConfig)]),
       {
         name: 'copy-theme-css',
         closeBundle() {
