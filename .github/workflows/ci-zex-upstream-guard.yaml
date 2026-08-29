@@ -1,0 +1,62 @@
+name: ZEX Upstream Guard
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-policy:
+    name: Validate Twenty pin and ZEX core changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate upstream manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f zex/twenty-upstream.json
+          test -f docs/ZEX_UPSTREAM_POLICY.md
+          test -f docs/ZEX_REPO_BOUNDARIES.md
+
+          BASELINE="$(node -p "require('./zex/twenty-upstream.json').baselineCommit")"
+          if [[ -z "$BASELINE" ]]; then
+            echo "baselineCommit is missing from zex/twenty-upstream.json"
+            exit 1
+          fi
+
+          git cat-file -e "${BASELINE}^{commit}" || {
+            echo "Pinned Twenty baseline commit ${BASELINE} is not present in repository history."
+            exit 1
+          }
+
+          node -e "JSON.parse(require('fs').readFileSync('zex/twenty-upstream.json','utf8')); console.log('ZEX upstream manifest is valid JSON')"
+          echo "Pinned Twenty baseline: ${BASELINE}"
+
+      - name: Require manifest update for Twenty core changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${{ github.base_ref }}" --depth=1 || true
+          CHANGED_FILES="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD)"
+          printf '%s\n' "$CHANGED_FILES"
+
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^packages/twenty-'; then
+            if ! printf '%s\n' "$CHANGED_FILES" | grep -Fxq 'zex/twenty-upstream.json'; then
+              echo "Twenty core files changed without updating zex/twenty-upstream.json."
+              echo "Document every intentional core patch or upstream upgrade in the manifest."
+              exit 1
+            fi
+          fi
+
+          echo "ZEX upstream/core-drift policy passed."
