@@ -1,0 +1,13 @@
+{
+  "upstreamRepository": "twentyhq/twenty",
+  "baselineCommit": "99e2c474a3dc256256543be405ef3c7702a63926",
+  "currentHeadAtPin": "8ea3af933461c8df4c01653862d8b8ced6758f32",
+  "knownZexCorePatches": [
+    {
+      "commit": "8ea3af933461c8df4c01653862d8b8ced6758f32",
+      "purpose": "Windows/local-development path compatibility and build handling",
+      "temporary": true
+    }
+  ],
+  "policyDocument": "docs/ZEX_UPSTREAM_POLICY.md"
+}
