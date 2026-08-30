@@ -29,6 +29,14 @@ export enum AppPath {
   PageLayoutPage = '/page/:pageLayoutId',
   WorkflowCoreIndexPage = '/workflow-core',
 
+  // ZEX CRM shell (customer-facing navigation). See docs/ZEX_APP_SHELL.md.
+  ZexCatchAll = '/zex/*',
+  ZexToday = '/zex/today',
+  ZexProspects = '/zex/prospects',
+  ZexCustomers = '/zex/customers',
+  ZexPipeline = '/zex/pipeline',
+  ZexAgents = '/zex/agents',
+
   Settings = `settings`,
   SettingsCatchAll = `/${Settings}/*`,
   Developers = `developers`,

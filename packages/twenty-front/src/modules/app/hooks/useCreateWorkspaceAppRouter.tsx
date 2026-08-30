@@ -34,6 +34,13 @@ const WorkflowCoreIndexPage = lazy(() =>
   })),
 );
 
+// ZEX CRM shell routes — owned by modules/zex; see docs/ZEX_APP_SHELL.md.
+const ZexRoutes = lazy(() =>
+  import('@/zex/components/ZexRoutes').then((module) => ({
+    default: module.ZexRoutes,
+  })),
+);
+
 const RecordIndexPage = lazy(() =>
   import('~/pages/object-record/RecordIndexPage').then((module) => ({
     default: module.RecordIndexPage,
@@ -178,6 +185,15 @@ const createWorkspaceAppRouter = ({
                   }
                 />
               )}
+              {/* ZEX: authenticated shell routes under DefaultLayout */}
+              <Route
+                path={AppPath.ZexCatchAll}
+                element={
+                  <LazyRoute>
+                    <ZexRoutes />
+                  </LazyRoute>
+                }
+              />
               <Route
                 path={indexAppPath.getIndexAppPath()}
                 element={<RecordIndexSkeletonLoader />}

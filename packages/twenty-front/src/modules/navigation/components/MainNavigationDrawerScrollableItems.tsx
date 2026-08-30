@@ -1,5 +1,6 @@
 import { NavigationDrawerOpenedSection } from '@/navigation-menu-item/display/sections/components/NavigationDrawerOpenedSection';
 import { NavigationDrawerWorkspaceSectionSkeletonLoader } from '@/object-metadata/components/NavigationDrawerWorkspaceSectionSkeletonLoader';
+import { ZexNavigationSection } from '@/zex/components/ZexNavigationSection';
 
 import { styled } from '@linaria/react';
 import { lazy, Suspense } from 'react';
@@ -31,6 +32,8 @@ const StyledScrollableItemsContainer = styled.div`
 export const MainNavigationDrawerScrollableItems = () => {
   return (
     <StyledScrollableItemsContainer>
+      {/* ZEX primary nav — see docs/ZEX_APP_SHELL.md */}
+      <ZexNavigationSection />
       <NavigationDrawerOpenedSection />
       <Suspense fallback={<NavigationDrawerWorkspaceSectionSkeletonLoader />}>
         <FavoritesSectionDispatcher />

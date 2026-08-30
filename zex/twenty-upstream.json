@@ -7,6 +7,18 @@
       "commit": "8ea3af933461c8df4c01653862d8b8ced6758f32",
       "purpose": "Windows/local-development path compatibility and build handling",
       "temporary": true
+    },
+    {
+      "commit": "feat/zex-app-shell",
+      "purpose": "Minimal ZEX CRM shell hooks: AppPath ZEX routes, authenticated /zex/* router registration, main drawer ZEX navigation section, desktop default landing /zex/today. ZEX UI owned under packages/twenty-front/src/modules/zex/. See docs/ZEX_APP_SHELL.md.",
+      "temporary": false,
+      "coreFiles": [
+        "packages/twenty-shared/src/types/AppPath.ts",
+        "packages/twenty-front/src/modules/app/hooks/useCreateWorkspaceAppRouter.tsx",
+        "packages/twenty-front/src/modules/navigation/components/MainNavigationDrawerScrollableItems.tsx",
+        "packages/twenty-front/src/modules/navigation/hooks/useDefaultHomePagePath.ts",
+        "packages/twenty-front/src/modules/navigation/hooks/__tests__/useDefaultHomePagePath.test.ts"
+      ]
     }
   ],
   "policyDocument": "docs/ZEX_UPSTREAM_POLICY.md"
