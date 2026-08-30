@@ -9,7 +9,7 @@
       "temporary": true
     },
     {
-      "commit": "feat/zex-app-shell",
+      "commit": "958144cf1029c52ad76a3cb40553382dbeb1cf32",
       "purpose": "Minimal ZEX CRM shell hooks: AppPath ZEX routes, authenticated /zex/* router registration, main drawer ZEX navigation section, desktop default landing /zex/today. ZEX UI owned under packages/twenty-front/src/modules/zex/. See docs/ZEX_APP_SHELL.md.",
       "temporary": false,
       "coreFiles": [
