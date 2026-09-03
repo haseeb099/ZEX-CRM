@@ -58,7 +58,3 @@ export const ZEX_NAVIGATION_ITEMS: ZexNavigationItem[] = [
     Icon: IconLego,
   },
 ];
-
-export const ZEX_NAVIGATION_LABELS = ZEX_NAVIGATION_ITEMS.map(
-  (item) => item.label,
-);

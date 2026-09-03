@@ -101,6 +101,86 @@ const setupMockState = (
     .mockReturnValueOnce(isOnboardingCheckoutPending);
 };
 
+const zexAppPathNavigateCases = [
+  AppPath.ZexCatchAll,
+  AppPath.ZexToday,
+  AppPath.ZexProspects,
+  AppPath.ZexCustomers,
+  AppPath.ZexPipeline,
+  AppPath.ZexAgents,
+].flatMap((loc) => [
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.PLAN_REQUIRED,
+    res: AppPath.PlanRequired,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: true,
+    onboardingStatus: OnboardingStatus.COMPLETED,
+    res: getSettingsPath(SettingsPath.Billing),
+  },
+  {
+    loc,
+    isLogged: false,
+    isWorkspaceSuspended: false,
+    onboardingStatus: undefined,
+    res: AppPath.SignInUp,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.WORKSPACE_ACTIVATION,
+    res: AppPath.WorkspaceActivation,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.PROFILE_CREATION,
+    res: AppPath.CreateProfile,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.SYNC_EMAIL,
+    res: AppPath.SyncEmails,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.APPS_INSTALLATION,
+    res: AppPath.InstallApps,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.INVITE_TEAM,
+    res: AppPath.InviteTeam,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.BOOK_CALL,
+    res: AppPath.BookCall,
+  },
+  {
+    loc,
+    isLogged: true,
+    isWorkspaceSuspended: false,
+    onboardingStatus: OnboardingStatus.COMPLETED,
+    res: undefined,
+  },
+]);
+
 // prettier-ignore
 const testCases: {
   loc: AppPath;
@@ -423,6 +503,8 @@ const testCases: {
   { loc: AppPath.NotFound, isLogged: true, isWorkspaceSuspended: false, onboardingStatus: OnboardingStatus.INVITE_TEAM, res: AppPath.InviteTeam },
   { loc: AppPath.NotFound, isLogged: true, isWorkspaceSuspended: false, onboardingStatus: OnboardingStatus.BOOK_CALL, res: AppPath.BookCall },
   { loc: AppPath.NotFound, isLogged: true, isWorkspaceSuspended: false, onboardingStatus: OnboardingStatus.COMPLETED, res: undefined },
+
+  ...zexAppPathNavigateCases,
 
   // isBillingEnabled:false — no post-invite-team upgrade interception on billing-disabled instances
   { loc: AppPath.InviteTeam, isLogged: true, isWorkspaceSuspended: false, onboardingStatus: OnboardingStatus.COMPLETED, isBillingEnabled: false, res: defaultHomePagePath },

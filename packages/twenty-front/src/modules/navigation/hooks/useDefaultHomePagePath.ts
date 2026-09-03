@@ -9,8 +9,6 @@ import { useMemo } from 'react';
 import { AppPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
-import { ZEX_APP_PATH } from '@/zex/constants/zex-app-path';
-
 export const useDefaultHomePagePath = () => {
   const currentUser = useAtomStateValue(currentUserState);
   const isMobile = useIsMobile();
@@ -44,7 +42,7 @@ export const useDefaultHomePagePath = () => {
 
     // ZEX: land authenticated desktop customers on the Today shell.
     // Mobile keeps /home. See docs/ZEX_APP_SHELL.md.
-    return ZEX_APP_PATH.Today;
+    return AppPath.ZexToday;
   }, [
     currentUser,
     isMobile,

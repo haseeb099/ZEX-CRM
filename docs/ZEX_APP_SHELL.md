@@ -70,6 +70,7 @@ Generic Twenty-core files touched for this shell:
 3. `packages/twenty-front/src/modules/navigation/components/MainNavigationDrawerScrollableItems.tsx` — render `ZexNavigationSection`
 4. `packages/twenty-front/src/modules/navigation/hooks/useDefaultHomePagePath.ts` — desktop landing → `/zex/today`
 5. `packages/twenty-front/src/modules/navigation/hooks/__tests__/useDefaultHomePagePath.test.ts` — landing expectations
+6. `packages/twenty-front/src/hooks/__tests__/usePageChangeEffectNavigateLocation.test.ts` — AppPath exhaustive auth/onboarding matrix for `/zex/*`
 
 Every intentional core touch is listed in `zex/twenty-upstream.json` under `knownZexCorePatches`.
 

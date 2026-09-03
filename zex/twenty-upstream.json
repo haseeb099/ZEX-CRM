@@ -17,7 +17,8 @@
         "packages/twenty-front/src/modules/app/hooks/useCreateWorkspaceAppRouter.tsx",
         "packages/twenty-front/src/modules/navigation/components/MainNavigationDrawerScrollableItems.tsx",
         "packages/twenty-front/src/modules/navigation/hooks/useDefaultHomePagePath.ts",
-        "packages/twenty-front/src/modules/navigation/hooks/__tests__/useDefaultHomePagePath.test.ts"
+        "packages/twenty-front/src/modules/navigation/hooks/__tests__/useDefaultHomePagePath.test.ts",
+        "packages/twenty-front/src/hooks/__tests__/usePageChangeEffectNavigateLocation.test.ts"
       ]
     }
   ],

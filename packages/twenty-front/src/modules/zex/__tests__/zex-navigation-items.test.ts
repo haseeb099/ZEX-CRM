@@ -1,14 +1,11 @@
 import { AppPath } from 'twenty-shared/types';
 
 import { ZEX_APP_PATH } from '@/zex/constants/zex-app-path';
-import {
-  ZEX_NAVIGATION_ITEMS,
-  ZEX_NAVIGATION_LABELS,
-} from '@/zex/constants/zex-navigation-items';
+import { ZEX_NAVIGATION_ITEMS } from '@/zex/constants/zex-navigation-items';
 
 describe('ZEX navigation shell', () => {
   it('exposes exactly Today, Prospects, Customers, Pipeline, Agents in order', () => {
-    expect(ZEX_NAVIGATION_LABELS).toEqual([
+    expect(ZEX_NAVIGATION_ITEMS.map((item) => item.label)).toEqual([
       'Today',
       'Prospects',
       'Customers',

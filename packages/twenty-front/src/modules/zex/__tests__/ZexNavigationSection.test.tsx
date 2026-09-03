@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { ZexNavigationSection } from '@/zex/components/ZexNavigationSection';
-import { ZEX_NAVIGATION_LABELS } from '@/zex/constants/zex-navigation-items';
 
 jest.mock(
   '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem',
@@ -48,6 +47,12 @@ describe('ZexNavigationSection', () => {
       (anchor) => anchor.textContent,
     );
 
-    expect(labels).toEqual(ZEX_NAVIGATION_LABELS);
+    expect(labels).toEqual([
+      'Today',
+      'Prospects',
+      'Customers',
+      'Pipeline',
+      'Agents',
+    ]);
   });
 });
