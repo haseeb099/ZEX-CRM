@@ -45,7 +45,8 @@ const setupMockIsLogged = (isLogged: boolean) => {
   jest.mocked(useIsLogged).mockReturnValueOnce(isLogged);
 };
 
-const defaultHomePagePath = '/objects/companies';
+// Matches ZEX desktop landing from useDefaultHomePagePath (AppPath.ZexToday).
+const defaultHomePagePath = AppPath.ZexToday;
 
 jest.mock('@/navigation/hooks/useDefaultHomePagePath');
 jest.mocked(useDefaultHomePagePath).mockReturnValue({
