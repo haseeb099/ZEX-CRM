@@ -36,8 +36,6 @@ export const useZexAgentMutation = (refetch: () => Promise<void>) => {
       try {
         const response = await zexFetch(buildMutationPath(intent, targetId), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
         });
 
         if (!response.ok) {

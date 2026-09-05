@@ -56,3 +56,5 @@ Contract version: `agent-control-v1`.
 - No optimistic control state as source of truth
 - Irreversible domain actions show “Not reversible”
 - Pause copy for AI SDR clarifies inbound reply / unsubscribe safety continues
+- Control mutation `triggeredBy` is derived only from authenticated CRM user
+  (`email ?? id`); the browser cannot supply or override the actor

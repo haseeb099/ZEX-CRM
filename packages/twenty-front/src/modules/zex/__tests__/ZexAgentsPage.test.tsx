@@ -500,8 +500,6 @@ describe('ZexAgentsPage', () => {
     await waitFor(() => {
       expect(zexFetch).toHaveBeenCalledWith('/agents/research_agent/resume', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
       });
     });
   });
@@ -575,8 +573,6 @@ describe('ZexAgentsPage', () => {
         '/agent-actions/action-pause-1/undo',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
         },
       );
     });

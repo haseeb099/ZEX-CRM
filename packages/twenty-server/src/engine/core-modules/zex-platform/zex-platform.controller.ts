@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Get,
   Param,
@@ -64,12 +63,12 @@ export class ZexPlatformController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('agentId') agentId: string,
     @AuthUser() user: UserEntity,
-    @Body() body?: { triggeredBy?: string },
   ) {
+    // Actor attribution is AuthUser-only — never accept client-supplied actor labels.
     return this.zexPlatformService.pauseAgent(
       workspace.id,
       agentId,
-      body?.triggeredBy ?? this.actorLabel(user),
+      this.actorLabel(user),
     );
   }
 
@@ -78,12 +77,11 @@ export class ZexPlatformController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('agentId') agentId: string,
     @AuthUser() user: UserEntity,
-    @Body() body?: { triggeredBy?: string },
   ) {
     return this.zexPlatformService.resumeAgent(
       workspace.id,
       agentId,
-      body?.triggeredBy ?? this.actorLabel(user),
+      this.actorLabel(user),
     );
   }
 
@@ -92,12 +90,11 @@ export class ZexPlatformController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('actionId') actionId: string,
     @AuthUser() user: UserEntity,
-    @Body() body?: { triggeredBy?: string },
   ) {
     return this.zexPlatformService.undoAgentAction(
       workspace.id,
       actionId,
-      body?.triggeredBy ?? this.actorLabel(user),
+      this.actorLabel(user),
     );
   }
 

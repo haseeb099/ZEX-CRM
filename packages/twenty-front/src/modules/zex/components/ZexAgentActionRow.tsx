@@ -92,12 +92,12 @@ export const ZexAgentActionRow = ({
   const confidenceLabel = formatConfidenceLabel(action.confidence);
   const showUndo =
     action.reversible === true && action.undo.status === 'available';
-  const irreversibleLabel =
-    action.reversible !== true || action.undo.status === 'not_reversible'
-      ? 'Not reversible'
-      : action.undo.status === 'undone'
-        ? 'Already undone'
-        : null;
+  // Only Platform `available` is actionable. Never infer undoability locally.
+  const irreversibleLabel = showUndo
+    ? null
+    : action.undo.status === 'undone'
+      ? 'Already undone'
+      : 'Not reversible';
 
   return (
     <StyledRow>

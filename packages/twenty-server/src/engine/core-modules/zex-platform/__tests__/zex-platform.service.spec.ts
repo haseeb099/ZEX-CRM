@@ -306,6 +306,30 @@ describe('ZexPlatformService', () => {
     );
   });
 
+  it('forwards only the server-provided triggeredBy string to Platform', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+    });
+    mockPost.mockResolvedValueOnce({
+      data: { agentId: 'research_agent', state: 'PAUSED', idempotent: false },
+    });
+
+    // Service is a pure forwarder of the controller-chosen actor label.
+    await service.pauseAgent(
+      'workspace-a',
+      'research_agent',
+      'operator@zex.test',
+    );
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/agents/research_agent/pause',
+      { triggeredBy: 'operator@zex.test' },
+    );
+    expect(JSON.stringify(mockPost.mock.calls)).not.toContain(
+      'spoofed@example.com',
+    );
+  });
+
   it('does not expose admin key in service surface beyond outbound auth header', () => {
     const header = service.getOutboundAuthHeaderForTests();
 
