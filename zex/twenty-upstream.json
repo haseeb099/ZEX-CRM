@@ -22,7 +22,7 @@
       ]
     },
     {
-      "commit": "62367f88e0371d56d34a3b9e9092d2d51959c01c",
+      "commit": "d6d02cb621a126b247f646b93247df71626f2897",
       "purpose": "ZEX-37 Today Action Feed: server-side Platform bridge at /rest/zex/* (JWT + workspace guards) and live Today UI. Admin API key stays on twenty-server only. See docs/ZEX_ACTION_FEED.md.",
       "temporary": false,
       "coreFiles": [
