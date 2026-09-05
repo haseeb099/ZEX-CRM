@@ -47,3 +47,145 @@ export type ZexPlatformActionFeedResponse = {
   };
   items: ZexPlatformActionFeedItem[];
 };
+
+// Agent Control Center (ZEX-39) — mirrors Platform agent-control-v1
+
+export type ZexPlatformAgentId = 'research_agent' | 'ai_sdr';
+
+export type ZexPlatformAgentStatus =
+  | 'paused'
+  | 'blocked'
+  | 'degraded'
+  | 'active'
+  | 'idle';
+
+export type ZexPlatformAgentControlState = 'ACTIVE' | 'PAUSED';
+
+export type ZexPlatformPermissionMode =
+  | 'allowed'
+  | 'approval_required'
+  | 'not_allowed'
+  | 'human_only';
+
+export type ZexPlatformAgentPermission = {
+  key: string;
+  label: string;
+  mode: ZexPlatformPermissionMode;
+  description: string;
+};
+
+export type ZexPlatformAgentApprovalPolicy = {
+  summary: string;
+  requiresHumanApproval: string[];
+  neverAutonomous: string[];
+};
+
+export type ZexPlatformConfidenceValue = number | null | 'not_applicable';
+
+export type ZexPlatformAgentActionEvidence = {
+  label: string;
+  text: string;
+  sourceUrl?: string | null;
+  sourceTitle?: string | null;
+  evidenceType?: string | null;
+  findingId?: string | null;
+  draftVersion?: number | null;
+  contentHash?: string | null;
+  whyNow?: string | null;
+  replyClassification?: string | null;
+  meetingStatus?: string | null;
+  doNotClaim?: string[] | null;
+};
+
+export type ZexPlatformUndoState = {
+  status: 'none' | 'available' | 'undone' | 'superseded' | 'not_reversible';
+  undoneByActionId?: string | null;
+  undoneAt?: string | null;
+};
+
+export type ZexPlatformAgentAction = {
+  id: string;
+  agentId: ZexPlatformAgentId | null;
+  actionType: string;
+  status: string;
+  occurredAt: string;
+  updatedAt: string;
+  subject: {
+    resourceType: string | null;
+    resourceId: string | null;
+    summary: string | null;
+  };
+  evidenceSummary: ZexPlatformAgentActionEvidence[];
+  confidence: ZexPlatformConfidenceValue;
+  permissionKey: string | null;
+  approvalState: string | null;
+  triggeredBy: string;
+  mutationSummary: {
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+    success: boolean;
+    message: string | null;
+  };
+  reversible: boolean;
+  undo: ZexPlatformUndoState;
+  auditLogId: string;
+};
+
+export type ZexPlatformAgentMetrics = {
+  currentWork: number;
+  recentFailures: number;
+  recentBlocked: number;
+  awaitingApproval: number;
+  lastActivityAt: string | null;
+};
+
+export type ZexPlatformAgentOverviewItem = {
+  id: ZexPlatformAgentId;
+  name: string;
+  description: string;
+  status: ZexPlatformAgentStatus;
+  controlState: ZexPlatformAgentControlState;
+  health: {
+    operational: boolean;
+    detail: string;
+  };
+  permissions: ZexPlatformAgentPermission[];
+  approvalPolicy: ZexPlatformAgentApprovalPolicy;
+  metrics: ZexPlatformAgentMetrics;
+  recentActions: ZexPlatformAgentAction[];
+};
+
+export type ZexPlatformAgentControlOverviewResponse = {
+  version: string;
+  tenantId: string;
+  generatedAt: string;
+  agents: ZexPlatformAgentOverviewItem[];
+};
+
+export type ZexPlatformAgentActionsResponse = {
+  version: string;
+  tenantId: string;
+  total: number;
+  limit: number;
+  offset: number;
+  actions: ZexPlatformAgentAction[];
+};
+
+export type ZexPlatformAgentControlMutationResponse = {
+  agentId: ZexPlatformAgentId;
+  state: ZexPlatformAgentControlState;
+  idempotent: boolean;
+  actionId?: string;
+  reversible?: boolean;
+  auditLogId?: string;
+};
+
+export type ZexPlatformAgentUndoResponse = {
+  undone: boolean;
+  idempotent: boolean;
+  actionId: string;
+  undoActionId: string;
+  agentId: ZexPlatformAgentId;
+  state: ZexPlatformAgentControlState;
+  auditLogId?: string;
+};

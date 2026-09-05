@@ -34,21 +34,80 @@ jest.mock('@/settings/components/SettingsCard', () => ({
 }));
 
 jest.mock('@/zex/utils/zexRestClient', () => ({
-  zexFetch: jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      version: 'action-feed-v1',
-      tenantId: 'tenant-1',
-      generatedAt: '2026-09-04T12:00:00.000Z',
-      summary: {
-        needsApproval: 0,
-        replies: 0,
-        meetings: 0,
-        blocked: 0,
-        total: 0,
-      },
-      items: [],
-    }),
+  zexFetch: jest.fn().mockImplementation(async (path: string) => {
+    if (path === '/agents') {
+      return {
+        ok: true,
+        json: async () => ({
+          version: 'agent-control-v1',
+          tenantId: 'tenant-1',
+          generatedAt: '2026-09-05T12:00:00.000Z',
+          agents: [
+            {
+              id: 'research_agent',
+              name: 'Research Agent',
+              description: 'Source-backed research.',
+              status: 'idle',
+              controlState: 'ACTIVE',
+              health: { operational: true, detail: 'Idle' },
+              permissions: [],
+              approvalPolicy: {
+                summary: 'Prospect approved first',
+                requiresHumanApproval: [],
+                neverAutonomous: [],
+              },
+              metrics: {
+                currentWork: 0,
+                recentFailures: 0,
+                recentBlocked: 0,
+                awaitingApproval: 0,
+                lastActivityAt: null,
+              },
+              recentActions: [],
+            },
+            {
+              id: 'ai_sdr',
+              name: 'AI SDR',
+              description: 'Approval-first outreach.',
+              status: 'idle',
+              controlState: 'ACTIVE',
+              health: { operational: true, detail: 'Idle' },
+              permissions: [],
+              approvalPolicy: {
+                summary: 'No auto-send',
+                requiresHumanApproval: [],
+                neverAutonomous: [],
+              },
+              metrics: {
+                currentWork: 0,
+                recentFailures: 0,
+                recentBlocked: 0,
+                awaitingApproval: 0,
+                lastActivityAt: null,
+              },
+              recentActions: [],
+            },
+          ],
+        }),
+      };
+    }
+
+    return {
+      ok: true,
+      json: async () => ({
+        version: 'action-feed-v1',
+        tenantId: 'tenant-1',
+        generatedAt: '2026-09-04T12:00:00.000Z',
+        summary: {
+          needsApproval: 0,
+          replies: 0,
+          meetings: 0,
+          blocked: 0,
+          total: 0,
+        },
+        items: [],
+      }),
+    };
   }),
 }));
 
@@ -145,13 +204,18 @@ describe('ZexRoutes', () => {
     expect(screen.getByText('Native Opportunities')).toBeTruthy();
   });
 
-  it('renders Agents shell with not-configured states', () => {
+  it('renders Agents control center from Platform overview', async () => {
     renderAt(ZEX_APP_PATH.Agents);
     expect(
       screen.getByRole('heading', { level: 1, name: 'Agents' }),
     ).toBeTruthy();
-    expect(screen.getByText('Research Agent')).toBeTruthy();
-    expect(screen.getAllByText('Not configured').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Research Agent')).toBeTruthy();
+    expect(screen.getByText('AI SDR')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Monitor ZEX agents, approvals, permissions and recent actions.',
+      ),
+    ).toBeTruthy();
   });
 
   it('defaults unknown /zex paths to Today', () => {
