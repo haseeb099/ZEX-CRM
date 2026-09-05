@@ -35,8 +35,8 @@
       ]
     },
     {
-      "commit": "78a16345d0865438a4879c3037614f7bfd395777",
-      "purpose": "ZEX-39 Agent Control Center: extend /rest/zex Platform bridge with agents overview, pause/resume, and reversible undo proxies; replace /zex/agents placeholder with live Control Center UI. Control mutation actors are AuthUser-only (no client-spoofable triggeredBy). See docs/ZEX_AGENT_CONTROL_CENTER.md.",
+      "commit": "0d3b70ebbe0b3a6e6a8bd1af999dba3cc803487c",
+      "purpose": "ZEX-39 Agent Control Center: extend /rest/zex Platform bridge with agents overview, pause/resume, and reversible undo proxies; replace /zex/agents placeholder with live Control Center UI. Control mutation actors are AuthUser-only (no client-spoofable triggeredBy). UndoStatus matches Platform agent-control-v1 including superseded. See docs/ZEX_AGENT_CONTROL_CENTER.md.",
       "temporary": false,
       "coreFiles": [
         "packages/twenty-server/src/engine/core-modules/zex-platform/zex-platform.service.ts",
