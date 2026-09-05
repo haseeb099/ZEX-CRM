@@ -20,7 +20,21 @@
         "packages/twenty-front/src/modules/navigation/hooks/__tests__/useDefaultHomePagePath.test.ts",
         "packages/twenty-front/src/hooks/__tests__/usePageChangeEffectNavigateLocation.test.ts"
       ]
+    },
+    {
+      "commit": "e202035c3831c24bebb81e4b9859297ed9439f8d",
+      "purpose": "ZEX-37 Today Action Feed: server-side Platform bridge at /rest/zex/* (JWT + workspace guards) and live Today UI. Admin API key stays on twenty-server only. See docs/ZEX_ACTION_FEED.md.",
+      "temporary": false,
+      "coreFiles": [
+        "packages/twenty-server/src/engine/core-modules/core-engine.module.ts",
+        "packages/twenty-server/src/engine/core-modules/zex-platform/zex-platform.module.ts",
+        "packages/twenty-server/src/engine/core-modules/zex-platform/zex-platform.service.ts",
+        "packages/twenty-server/src/engine/core-modules/zex-platform/zex-platform.controller.ts",
+        "packages/twenty-server/src/engine/core-modules/zex-platform/zex-platform.types.ts",
+        "packages/twenty-server/src/engine/core-modules/zex-platform/__tests__/zex-platform.service.spec.ts"
+      ]
     }
   ],
   "policyDocument": "docs/ZEX_UPSTREAM_POLICY.md"
 }
+

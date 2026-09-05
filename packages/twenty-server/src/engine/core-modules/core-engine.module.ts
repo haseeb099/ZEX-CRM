@@ -84,6 +84,7 @@ import { SendEmailModule } from 'src/modules/messaging/message-outbound-manager/
 import { ClientConfigModule } from './client-config/client-config.module';
 import { EventLogsViewerModule } from './event-logs/event-logs-viewer.module';
 import { FileModule } from './file/file.module';
+import { ZexPlatformModule } from './zex-platform/zex-platform.module';
 
 @Module({
   imports: [
@@ -173,6 +174,7 @@ import { FileModule } from './file/file.module';
     EventLogsViewerModule,
     PreInstalledAppsModule,
     AppBillingModule,
+    ZexPlatformModule,
   ],
   providers: [
     {

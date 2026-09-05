@@ -1,52 +1,77 @@
-import {
-  IconBell,
-  IconLego,
-  IconListCheck,
-  IconSun,
-  IconTargetArrow,
-} from 'twenty-ui/icon';
+import { styled } from '@linaria/react';
+import { IconSun } from 'twenty-ui/icon';
 
-import { ZexPlaceholderCard } from '@/zex/components/ZexPlaceholderCard';
-import { ZexPlaceholderGrid } from '@/zex/components/ZexPlaceholderGrid';
+import { ZexActionFeedCard } from '@/zex/components/ZexActionFeedCard';
+import { ZexActionFeedEmpty } from '@/zex/components/ZexActionFeedEmpty';
+import { ZexActionFeedError } from '@/zex/components/ZexActionFeedError';
+import { ZexActionFeedLoading } from '@/zex/components/ZexActionFeedLoading';
 import { ZexShellPage } from '@/zex/components/ZexShellPage';
+import { ZexTodaySummaryStrip } from '@/zex/components/ZexTodaySummaryStrip';
+import { useZexActionFeed } from '@/zex/hooks/useZexActionFeed';
+import { useZexActionMutation } from '@/zex/hooks/useZexActionMutation';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
+
+const StyledFeedList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMutationError = styled.div`
+  color: ${themeCssVariables.font.color.secondary};
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[2]} 0;
+`;
 
 export const ZexTodayPage = () => {
+  const { data, loading, error, refetch } = useZexActionFeed();
+  const { mutate, isPending, isAnyPending, mutationError } =
+    useZexActionMutation(refetch);
+
   return (
     <ZexShellPage
       title="Today"
-      subtitle="Your ZEX action home — what needs attention across pipeline, signals, and agents."
+      subtitle="Your highest-priority revenue actions"
       Icon={IconSun}
     >
-      <ZexPlaceholderGrid>
-        <ZexPlaceholderCard
-          title="Priority actions"
-          description="Highest-impact next steps will appear here once Company Brain and Why-Now scoring are connected."
-          Icon={IconListCheck}
-          statusText="Ready soon"
-          statusColor="orange"
+      {loading && !data && <ZexActionFeedLoading />}
+
+      {error && !data && (
+        <ZexActionFeedError
+          message={error.message}
+          onRetry={() => void refetch()}
         />
-        <ZexPlaceholderCard
-          title="New signals"
-          description="Fresh intent and research signals will surface here. No live Platform feed yet."
-          Icon={IconBell}
-          statusText="Ready soon"
-          statusColor="orange"
-        />
-        <ZexPlaceholderCard
-          title="Agent activity"
-          description="Recent Research, AI SDR, and Meeting / Deal agent activity will be summarized here."
-          Icon={IconLego}
-          statusText="Not configured"
-          statusColor="gray"
-        />
-        <ZexPlaceholderCard
-          title="Pipeline attention"
-          description="Deals needing follow-up will be highlighted here from the native Opportunities pipeline."
-          Icon={IconTargetArrow}
-          statusText="Ready soon"
-          statusColor="orange"
-        />
-      </ZexPlaceholderGrid>
+      )}
+
+      {data && (
+        <>
+          <ZexTodaySummaryStrip summary={data.summary} />
+
+          {mutationError && (
+            <StyledMutationError role="alert">
+              <div>{mutationError}</div>
+            </StyledMutationError>
+          )}
+
+          {data.items.length === 0 ? (
+            <ZexActionFeedEmpty />
+          ) : (
+            <StyledFeedList>
+              {data.items.map((item) => (
+                <ZexActionFeedCard
+                  key={item.id}
+                  item={item}
+                  onMutate={(feedItem, intent) => void mutate(feedItem, intent)}
+                  isPending={isPending}
+                  isAnyPending={isAnyPending}
+                />
+              ))}
+            </StyledFeedList>
+          )}
+        </>
+      )}
     </ZexShellPage>
   );
 };
