@@ -56,7 +56,7 @@ Therefore the safest upgradeable path is:
 | Pipeline | Native Opportunities index (`AppPath.OpportunitiesPage`) |
 | Prospects | Links into People + Companies record indexes |
 | Customers | Links into Companies + People record indexes |
-| Today / Agents | Shell placeholders only |
+| Today / Agents | Today: live Action Feed via server proxy; Agents shell placeholders |
 | Layout / chrome | `PageCardLayout`, `PageCardHeader`, `NavigationDrawerItem`, `SettingsCard`, Twenty icons |
 
 Routes are registered under `MainAppLayoutWithSidePanel` inside `DefaultLayout`, so they inherit authenticated workspace gating via `PageChangeEffect` (unauthenticated users redirect to `/welcome`).
@@ -93,7 +93,8 @@ Unauthenticated users never receive public ZEX pages.
 
 | Surface | Status |
 |---------|--------|
-| Today priority actions / signals / agent activity / pipeline attention | Shell cards only |
+| Today action feed | Live via `GET /rest/zex/action-feed` (see `docs/ZEX_ACTION_FEED.md`) |
+| Today other cards | Removed — feed replaces placeholder grid |
 | Prospects discovery engine | Not built; native People/Companies links |
 | Customers Customer Memory enrichment | Not built; native Companies/People links |
 | Pipeline board | Native Opportunities (no rebuild) |
@@ -106,4 +107,4 @@ Unauthenticated users never receive public ZEX pages.
 - Why-Now scoring
 - Research Agent / AI SDR / Meeting & Deal agents
 - Agent Control Center
-- Live Today backend feeds from ZEX-Platform (via authenticated server boundary only)
+- Live feeds for Prospects / Agents surfaces (Today feed is live; see `docs/ZEX_ACTION_FEED.md`)

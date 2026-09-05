@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ZexRoutes } from '@/zex/components/ZexRoutes';
 import { ZEX_APP_PATH } from '@/zex/constants/zex-app-path';
 
+jest.mock('@linaria/react', () => require('./linaria-mock').linariaMock);
+
 jest.mock('@/ui/utilities/page-title/components/PageTitle', () => ({
   PageTitle: () => null,
 }));
@@ -29,6 +31,41 @@ jest.mock('@/ui/layout/page/components/PageCardHeader', () => ({
 
 jest.mock('@/settings/components/SettingsCard', () => ({
   SettingsCard: ({ title }: { title: string }) => <div>{title}</div>,
+}));
+
+jest.mock('@/zex/utils/zexRestClient', () => ({
+  zexFetch: jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      version: 'action-feed-v1',
+      tenantId: 'tenant-1',
+      generatedAt: '2026-09-04T12:00:00.000Z',
+      summary: {
+        needsApproval: 0,
+        replies: 0,
+        meetings: 0,
+        blocked: 0,
+        total: 0,
+      },
+      items: [],
+    }),
+  }),
+}));
+
+jest.mock('react-loading-skeleton', () => ({
+  __esModule: true,
+  default: () => null,
+  SkeletonTheme: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
+jest.mock('twenty-ui/input', () => ({
+  Button: ({ title, onClick }: { title?: string; onClick?: () => void }) => (
+    <button type="button" onClick={onClick}>
+      {title}
+    </button>
+  ),
 }));
 
 jest.mock('twenty-ui/data-display', () => ({
@@ -79,12 +116,14 @@ const renderAt = (path: string) => {
 };
 
 describe('ZexRoutes', () => {
-  it('renders Today shell', () => {
+  it('renders Today shell', async () => {
     renderAt(ZEX_APP_PATH.Today);
     expect(
       screen.getByRole('heading', { level: 1, name: 'Today' }),
     ).toBeTruthy();
-    expect(screen.getByText('Priority actions')).toBeTruthy();
+    expect(
+      await screen.findByText('Your highest-priority revenue actions'),
+    ).toBeTruthy();
   });
 
   it('renders Prospects shell', () => {
