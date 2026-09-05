@@ -98,7 +98,7 @@ export type ZexPlatformAgentActionEvidence = {
 };
 
 export type ZexPlatformUndoState = {
-  status: 'none' | 'available' | 'undone' | 'not_reversible';
+  status: 'none' | 'available' | 'undone' | 'superseded' | 'not_reversible';
   undoneByActionId?: string | null;
   undoneAt?: string | null;
 };

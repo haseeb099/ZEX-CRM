@@ -392,6 +392,52 @@ describe('ZexAgentsPage', () => {
     expect(screen.getAllByRole('button', { name: 'Undo' })).toHaveLength(1);
   });
 
+  it('labels superseded/undone/not_reversible without offering Undo', async () => {
+    const supersededAction: AgentAction = {
+      ...reversiblePauseAction,
+      id: 'action-superseded-1',
+      auditLogId: 'action-superseded-1',
+      undo: { status: 'superseded' },
+    };
+    const undoneAction: AgentAction = {
+      ...reversiblePauseAction,
+      id: 'action-undone-1',
+      auditLogId: 'action-undone-1',
+      actionType: 'agent_control_resumed',
+      undo: {
+        status: 'undone',
+        undoneByActionId: 'undo-older',
+        undoneAt: '2026-09-05T11:30:00.000Z',
+      },
+    };
+
+    zexFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ...overviewResponse,
+        agents: [
+          {
+            ...researchAgent,
+            recentActions: [
+              supersededAction,
+              undoneAction,
+              irreversibleSentAction,
+            ],
+          },
+        ],
+      }),
+    });
+
+    render(<ZexAgentsPage />);
+
+    expect(
+      await screen.findByText('Superseded by newer control action'),
+    ).toBeTruthy();
+    expect(screen.getByText('Already undone')).toBeTruthy();
+    expect(screen.getByText('Not reversible')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+  });
+
   it('pauses with confirmation, pending protection, then refetches', async () => {
     let resolvePause: (value: {
       ok: boolean;

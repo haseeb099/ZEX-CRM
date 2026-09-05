@@ -97,7 +97,9 @@ export const ZexAgentActionRow = ({
     ? null
     : action.undo.status === 'undone'
       ? 'Already undone'
-      : 'Not reversible';
+      : action.undo.status === 'superseded'
+        ? 'Superseded by newer control action'
+        : 'Not reversible';
 
   return (
     <StyledRow>

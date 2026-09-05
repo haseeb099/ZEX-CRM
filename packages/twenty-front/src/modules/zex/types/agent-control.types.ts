@@ -43,7 +43,7 @@ export type AgentActionEvidence = {
 };
 
 export type UndoState = {
-  status: 'none' | 'available' | 'undone' | 'not_reversible';
+  status: 'none' | 'available' | 'undone' | 'superseded' | 'not_reversible';
   undoneByActionId?: string | null;
   undoneAt?: string | null;
 };
