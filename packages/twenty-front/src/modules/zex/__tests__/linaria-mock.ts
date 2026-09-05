@@ -49,5 +49,7 @@ export const linariaMock = {
     section: templateFactory('section'),
     a: templateFactory('a'),
     button: templateFactory('button'),
+    ul: templateFactory('ul'),
+    li: templateFactory('li'),
   }),
 };

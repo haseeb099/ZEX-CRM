@@ -219,6 +219,93 @@ describe('ZexPlatformService', () => {
     );
   });
 
+  it('proxies agent control overview with workspace-resolved tenant id', async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          version: 'agent-control-v1',
+          tenantId: 'tenant-a',
+          generatedAt: '2026-09-05T00:00:00.000Z',
+          agents: [],
+        },
+      });
+
+    const overview = await service.getAgentControlOverview('workspace-a', 8);
+
+    expect(overview.version).toBe('agent-control-v1');
+    expect(JSON.stringify(overview)).not.toContain('test-admin-key');
+    expect(mockGet).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/admin/tenants/tenant-a/agents',
+      { params: { recentLimit: 8 } },
+    );
+  });
+
+  it('proxies pause/resume/undo through tenant-scoped Platform paths', async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      })
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      })
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      });
+    mockPost
+      .mockResolvedValueOnce({
+        data: {
+          agentId: 'research_agent',
+          state: 'PAUSED',
+          idempotent: false,
+          reversible: true,
+          actionId: 'action-1',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          agentId: 'research_agent',
+          state: 'ACTIVE',
+          idempotent: false,
+          reversible: true,
+          actionId: 'action-2',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          undone: true,
+          idempotent: false,
+          actionId: 'action-1',
+          undoActionId: 'undo-1',
+          agentId: 'research_agent',
+          state: 'ACTIVE',
+        },
+      });
+
+    await service.pauseAgent('workspace-a', 'research_agent', 'user@zex.test');
+    await service.resumeAgent('workspace-a', 'research_agent', 'user@zex.test');
+    await service.undoAgentAction('workspace-a', 'action-1', 'user@zex.test');
+
+    expect(mockPost).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/admin/tenants/tenant-a/agents/research_agent/pause',
+      { triggeredBy: 'user@zex.test' },
+    );
+    expect(mockPost).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/admin/tenants/tenant-a/agents/research_agent/resume',
+      { triggeredBy: 'user@zex.test' },
+    );
+    expect(mockPost).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1/admin/tenants/tenant-a/agent-actions/action-1/undo',
+      { triggeredBy: 'user@zex.test' },
+    );
+  });
+
   it('does not expose admin key in service surface beyond outbound auth header', () => {
     const header = service.getOutboundAuthHeaderForTests();
 

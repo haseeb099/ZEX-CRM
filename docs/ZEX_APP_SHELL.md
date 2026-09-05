@@ -98,13 +98,12 @@ Unauthenticated users never receive public ZEX pages.
 | Prospects discovery engine | Not built; native People/Companies links |
 | Customers Customer Memory enrichment | Not built; native Companies/People links |
 | Pipeline board | Native Opportunities (no rebuild) |
-| Agents Research / AI SDR / Meeting-Deal | Not configured / Ready soon — no send/actions |
+| Agents Control Center | Live via `GET /rest/zex/agents` (see `docs/ZEX_AGENT_CONTROL_CENTER.md`) |
 
 ## Next modules
 
 - Company Brain
 - Prospect discovery + enrichment
 - Why-Now scoring
-- Research Agent / AI SDR / Meeting & Deal agents
-- Agent Control Center
-- Live feeds for Prospects / Agents surfaces (Today feed is live; see `docs/ZEX_ACTION_FEED.md`)
+- Meeting / Deal Agent (not in Control Center v1)
+- Live feeds for Prospects surfaces (Today feed is live; see `docs/ZEX_ACTION_FEED.md`)

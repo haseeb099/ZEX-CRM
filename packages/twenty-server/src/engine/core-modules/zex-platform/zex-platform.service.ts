@@ -6,6 +6,10 @@ import { SecureHttpClientService } from 'src/engine/core-modules/secure-http-cli
 
 import {
   type ZexPlatformActionFeedResponse,
+  type ZexPlatformAgentActionsResponse,
+  type ZexPlatformAgentControlMutationResponse,
+  type ZexPlatformAgentControlOverviewResponse,
+  type ZexPlatformAgentUndoResponse,
   type ZexPlatformTenantResolveResponse,
 } from './zex-platform.types';
 
@@ -131,6 +135,89 @@ export class ZexPlatformService {
     const client = this.getClient();
     const response = await client.post(
       `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/sdr/sequences/${encodeURIComponent(sequenceId)}/meetings/confirm`,
+    );
+
+    return response.data;
+  }
+
+  async getAgentControlOverview(
+    workspaceId: string,
+    recentLimit = 10,
+  ): Promise<ZexPlatformAgentControlOverviewResponse> {
+    const tenantId = await this.resolveTenantId(workspaceId);
+    const client = this.getClient();
+    const response = await client.get<ZexPlatformAgentControlOverviewResponse>(
+      `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/agents`,
+      { params: { recentLimit } },
+    );
+
+    return response.data;
+  }
+
+  async listAgentActions(
+    workspaceId: string,
+    options: {
+      agentId?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<ZexPlatformAgentActionsResponse> {
+    const tenantId = await this.resolveTenantId(workspaceId);
+    const client = this.getClient();
+    const response = await client.get<ZexPlatformAgentActionsResponse>(
+      `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/agent-actions`,
+      {
+        params: {
+          ...(options.agentId ? { agentId: options.agentId } : {}),
+          ...(options.limit !== undefined ? { limit: options.limit } : {}),
+          ...(options.offset !== undefined ? { offset: options.offset } : {}),
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async pauseAgent(
+    workspaceId: string,
+    agentId: string,
+    triggeredBy: string,
+  ): Promise<ZexPlatformAgentControlMutationResponse> {
+    const tenantId = await this.resolveTenantId(workspaceId);
+    const client = this.getClient();
+    const response = await client.post<ZexPlatformAgentControlMutationResponse>(
+      `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/agents/${encodeURIComponent(agentId)}/pause`,
+      { triggeredBy },
+    );
+
+    return response.data;
+  }
+
+  async resumeAgent(
+    workspaceId: string,
+    agentId: string,
+    triggeredBy: string,
+  ): Promise<ZexPlatformAgentControlMutationResponse> {
+    const tenantId = await this.resolveTenantId(workspaceId);
+    const client = this.getClient();
+    const response = await client.post<ZexPlatformAgentControlMutationResponse>(
+      `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/agents/${encodeURIComponent(agentId)}/resume`,
+      { triggeredBy },
+    );
+
+    return response.data;
+  }
+
+  async undoAgentAction(
+    workspaceId: string,
+    actionId: string,
+    triggeredBy: string,
+  ): Promise<ZexPlatformAgentUndoResponse> {
+    const tenantId = await this.resolveTenantId(workspaceId);
+    const client = this.getClient();
+    const response = await client.post<ZexPlatformAgentUndoResponse>(
+      `/api/v1/admin/tenants/${encodeURIComponent(tenantId)}/agent-actions/${encodeURIComponent(actionId)}/undo`,
+      { triggeredBy },
     );
 
     return response.data;

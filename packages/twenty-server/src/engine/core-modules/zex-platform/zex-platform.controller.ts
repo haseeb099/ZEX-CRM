@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
   Post,
+  Query,
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
@@ -28,6 +30,75 @@ export class ZexPlatformController {
   @Get('action-feed')
   getActionFeed(@AuthWorkspace() workspace: WorkspaceEntity) {
     return this.zexPlatformService.getActionFeed(workspace.id);
+  }
+
+  @Get('agents')
+  getAgents(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Query('recentLimit') recentLimit?: string,
+  ) {
+    const parsedLimit = recentLimit ? Number(recentLimit) : 10;
+
+    return this.zexPlatformService.getAgentControlOverview(
+      workspace.id,
+      Number.isFinite(parsedLimit) ? parsedLimit : 10,
+    );
+  }
+
+  @Get('agent-actions')
+  getAgentActions(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Query('agentId') agentId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.zexPlatformService.listAgentActions(workspace.id, {
+      agentId,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
+  @Post('agents/:agentId/pause')
+  pauseAgent(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('agentId') agentId: string,
+    @AuthUser() user: UserEntity,
+    @Body() body?: { triggeredBy?: string },
+  ) {
+    return this.zexPlatformService.pauseAgent(
+      workspace.id,
+      agentId,
+      body?.triggeredBy ?? this.actorLabel(user),
+    );
+  }
+
+  @Post('agents/:agentId/resume')
+  resumeAgent(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('agentId') agentId: string,
+    @AuthUser() user: UserEntity,
+    @Body() body?: { triggeredBy?: string },
+  ) {
+    return this.zexPlatformService.resumeAgent(
+      workspace.id,
+      agentId,
+      body?.triggeredBy ?? this.actorLabel(user),
+    );
+  }
+
+  @Post('agent-actions/:actionId/undo')
+  undoAgentAction(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('actionId') actionId: string,
+    @AuthUser() user: UserEntity,
+    @Body() body?: { triggeredBy?: string },
+  ) {
+    return this.zexPlatformService.undoAgentAction(
+      workspace.id,
+      actionId,
+      body?.triggeredBy ?? this.actorLabel(user),
+    );
   }
 
   @Post('actions/prospects/:candidateId/approve')
