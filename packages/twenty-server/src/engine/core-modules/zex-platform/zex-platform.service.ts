@@ -21,7 +21,6 @@ export class ZexPlatformService {
       '',
     );
     const adminApiKey = process.env.ZEX_PLATFORM_ADMIN_API_KEY ?? '';
-    const tenantIdOverride = process.env.ZEX_PLATFORM_TENANT_ID;
 
     if (!isDefined(baseUrl) || baseUrl.length === 0 || !adminApiKey) {
       throw new ServiceUnavailableException(
@@ -29,7 +28,7 @@ export class ZexPlatformService {
       );
     }
 
-    return { baseUrl, adminApiKey, tenantIdOverride };
+    return { baseUrl, adminApiKey };
   }
 
   private getClient() {
@@ -45,13 +44,9 @@ export class ZexPlatformService {
     });
   }
 
+  // Always resolve via Platform workspace mapping — never accept an unscoped
+  // ZEX_PLATFORM_TENANT_ID override (breaks multi-workspace tenant isolation).
   async resolveTenantId(workspaceId: string): Promise<string> {
-    const { tenantIdOverride } = this.getConfig();
-
-    if (isDefined(tenantIdOverride) && tenantIdOverride.length > 0) {
-      return tenantIdOverride;
-    }
-
     const client = this.getClient();
     const response = await client.get<ZexPlatformTenantResolveResponse>(
       `/api/v1/admin/tenants/by-workspace/${encodeURIComponent(workspaceId)}`,
