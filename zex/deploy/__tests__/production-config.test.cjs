@@ -9,6 +9,16 @@ const {
   validateProductionConfig,
   parseEnvFile,
 } = require('../scripts/validate-production-config.cjs');
+const {
+  assertCleanWorkingTree,
+  deriveImageTags,
+  isForbiddenLatestTag,
+} = require('../scripts/build-provenance.cjs');
+const {
+  PRODUCTION_CONFIRM_PHRASE,
+  evaluateRestoreTarget,
+  urlsEqual,
+} = require('../scripts/restore-safety.cjs');
 const { runSmoke } = require('../scripts/smoke-production.cjs');
 
 const ROOT = path.resolve(__dirname, '../../..');
@@ -17,6 +27,9 @@ const COMPOSE_PATH = path.join(
   'zex/deploy/docker-compose.production.yml',
 );
 const ENV_EXAMPLE_PATH = path.join(ROOT, 'zex/deploy/.env.production.example');
+const BUILD_SH = path.join(ROOT, 'zex/deploy/scripts/build-zex-crm-image.sh');
+const BUILD_PS1 = path.join(ROOT, 'zex/deploy/scripts/build-zex-crm-image.ps1');
+const RESTORE_SH = path.join(ROOT, 'zex/deploy/scripts/restore-postgres.sh');
 
 describe('ZEX-27 production deploy validators', () => {
   it('rejects latest image references', () => {
@@ -122,5 +135,116 @@ VITE_ZEX_PLATFORM_ADMIN_API_KEY=leak
     } finally {
       delete process.env.CRM_AUTH_HEADER;
     }
+  });
+});
+
+describe('ZEX-27 immutable image provenance', () => {
+  it('allows a clean working tree', () => {
+    assert.doesNotThrow(() => assertCleanWorkingTree(''));
+    assert.doesNotThrow(() => assertCleanWorkingTree('\n'));
+  });
+
+  it('refuses a dirty working tree', () => {
+    assert.throws(
+      () => assertCleanWorkingTree(' M zex/deploy/README.md\n'),
+      /refusing production image build: working tree is dirty/,
+    );
+  });
+
+  it('derives full SHA tag from HEAD and rejects :latest', () => {
+    const headSha = 'bbd9ea385a11d1d1a4ca4762376a51b2e8aa41b7';
+    const tags = deriveImageTags({ headSha, repo: 'zex-crm' });
+    assert.equal(tags.fullTag, `zex-crm:${headSha}`);
+    assert.equal(tags.shortTag, 'zex-crm:bbd9ea385a11');
+    assert.equal(tags.appVersion, `0.0.0+${headSha}`);
+    assert.equal(isForbiddenLatestTag('zex-crm:latest'), true);
+    assert.throws(
+      () => deriveImageTags({ headSha: 'latest', repo: 'zex-crm' }),
+      /HEAD SHA is required/,
+    );
+  });
+
+  it('bash and PowerShell build scripts fail-closed via provenance gate', () => {
+    const bash = fs.readFileSync(BUILD_SH, 'utf8');
+    const powershell = fs.readFileSync(BUILD_PS1, 'utf8');
+    assert.match(bash, /build-provenance\.cjs assert-clean/);
+    assert.match(powershell, /build-provenance\.cjs assert-clean/);
+    assert.doesNotMatch(bash, /warning: working tree is dirty/);
+    assert.match(bash, /dirty|assert-clean|fail-closed|refusing/i);
+  });
+
+  it('compose keeps server and worker on the exact same image reference', () => {
+    const composeText = fs.readFileSync(COMPOSE_PATH, 'utf8');
+    const errors = validateCompose(composeText);
+    assert.deepEqual(errors, []);
+    const imageLines = composeText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('image:'));
+    assert.equal(imageLines[0], imageLines[1]);
+  });
+});
+
+describe('ZEX-27 restore target safety', () => {
+  const productionUrl =
+    'postgres://postgres:secret@db:5432/default?sslmode=disable';
+  const disposableUrl =
+    'postgres://postgres:secret@db:5432/zex_crm_restore_tmp';
+
+  it('allows disposable restore URL', () => {
+    const decision = evaluateRestoreTarget({
+      restoreUrl: disposableUrl,
+      productionUrl,
+    });
+    assert.equal(decision.allowed, true);
+    assert.equal(decision.isProductionTarget, false);
+  });
+
+  it('refuses restore target equal to production without explicit allow', () => {
+    const decision = evaluateRestoreTarget({
+      restoreUrl: productionUrl,
+      productionUrl,
+    });
+    assert.equal(decision.allowed, false);
+    assert.equal(decision.isProductionTarget, true);
+    assert.match(decision.reason, /ALLOW_PRODUCTION_RESTORE/);
+  });
+
+  it('refuses allow flag without confirmation phrase', () => {
+    const decision = evaluateRestoreTarget({
+      restoreUrl: productionUrl,
+      productionUrl,
+      allowProductionRestore: true,
+      confirmPhrase: 'wrong',
+    });
+    assert.equal(decision.allowed, false);
+    assert.match(decision.reason, /CONFIRM_PHRASE/);
+  });
+
+  it('permits production restore only with allow flag + correct phrase', () => {
+    const productionUrlWithTrailingPathSlash =
+      'postgres://postgres:secret@db:5432/default/?sslmode=disable';
+    const decision = evaluateRestoreTarget({
+      restoreUrl: productionUrlWithTrailingPathSlash,
+      productionUrl,
+      allowProductionRestore: 'true',
+      confirmPhrase: PRODUCTION_CONFIRM_PHRASE,
+    });
+    assert.equal(decision.allowed, true);
+    assert.equal(decision.isProductionTarget, true);
+    assert.equal(
+      urlsEqual(productionUrl, productionUrlWithTrailingPathSlash),
+      true,
+    );
+  });
+
+  it('restore script uses ON_ERROR_STOP and URL gate (not name heuristics)', () => {
+    const restoreScript = fs.readFileSync(RESTORE_SH, 'utf8');
+    assert.match(restoreScript, /ON_ERROR_STOP=1/);
+    assert.match(restoreScript, /restore-safety\.cjs/);
+    assert.match(restoreScript, /RESTORE_DATABASE_URL/);
+    assert.match(restoreScript, /PRODUCTION_DATABASE_URL/);
+    assert.doesNotMatch(restoreScript, /\*prod\*/);
+    assert.doesNotMatch(restoreScript, /FORCE=1/);
   });
 });

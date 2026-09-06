@@ -16,7 +16,9 @@ Production must run an image built from the **exact reviewed ZEX-CRM commit**.
 
 ## 2. Image pin / version strategy
 
-1. Check out the reviewed release commit.
+1. Check out the reviewed release commit on a **clean** working tree
+   (`git status --porcelain` empty). Dirty trees are refused fail-closed by
+   both Bash and PowerShell build scripts.
 2. Build:
 
 ```bash
@@ -136,7 +138,13 @@ Requirements:
 
 - Off-host encrypted storage recommended.
 - Timestamp + release metadata (`.meta.json`).
-- Restore into a **disposable** DB first (`restore-postgres.sh` refuses `*prod*` names without `--force`).
+- Restore into a **disposable** DB first via `RESTORE_DATABASE_URL`.
+- Safety is URL-equality based (not hostname/DB-name heuristics):
+  - set `PRODUCTION_DATABASE_URL` to the canonical production URL
+  - if `RESTORE_DATABASE_URL` equals production → refused unless
+    `ALLOW_PRODUCTION_RESTORE=true` **and**
+    `CONFIRM_PHRASE=RESTORE_PRODUCTION_CONFIRM`
+- `psql -v ON_ERROR_STOP=1` — any SQL failure aborts restore non-zero.
 - Verify workspace/object data before any cutover.
 - No destructive production restore by default.
 

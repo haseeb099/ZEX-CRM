@@ -10,6 +10,7 @@
 #   <repo>:<full-git-sha>
 #   <repo>:<short-12-sha>
 # Never tags :latest.
+# Refuses to build when git status --porcelain is non-empty (fail-closed).
 
 set -euo pipefail
 
@@ -24,26 +25,24 @@ if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2
   exit 1
 fi
-
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "warning: working tree is dirty; image will still be tagged with HEAD SHA" >&2
+if ! command -v node >/dev/null 2>&1; then
+  echo "node is required" >&2
+  exit 1
 fi
 
-FULL_SHA="$(git rev-parse HEAD)"
-SHORT_SHA="$(git rev-parse --short=12 HEAD)"
-REPO="${ZEX_CRM_IMAGE_REPO:-zex-crm}"
-FULL_TAG="${REPO}:${FULL_SHA}"
-SHORT_TAG="${REPO}:${SHORT_SHA}"
-# Twenty config validates APP_VERSION as semver; keep git SHA in the image tag
-# and bake the commit into build metadata (0.0.0+<sha>).
-APP_SEMVER="0.0.0+${FULL_SHA}"
+# Fail closed: dirty tree must never produce a SHA-tagged production image.
+PROVENANCE_JSON="$(node zex/deploy/scripts/build-provenance.cjs assert-clean)"
+FULL_SHA="$(node -e "const j=JSON.parse(process.argv[1]); process.stdout.write(j.headSha)" "${PROVENANCE_JSON}")"
+FULL_TAG="$(node -e "const j=JSON.parse(process.argv[1]); process.stdout.write(j.fullTag)" "${PROVENANCE_JSON}")"
+SHORT_TAG="$(node -e "const j=JSON.parse(process.argv[1]); process.stdout.write(j.shortTag)" "${PROVENANCE_JSON}")"
+APP_SEMVER="$(node -e "const j=JSON.parse(process.argv[1]); process.stdout.write(j.appVersion)" "${PROVENANCE_JSON}")"
 
 if [[ "${FULL_TAG}" == *":latest" ]] || [[ "${SHORT_TAG}" == *":latest" ]]; then
   echo "refusing to tag :latest" >&2
   exit 1
 fi
 
-echo "Building ZEX-CRM image from ${FULL_SHA}"
+echo "Building ZEX-CRM image from clean tree ${FULL_SHA}"
 echo "  Dockerfile: packages/twenty-docker/twenty/Dockerfile"
 echo "  target: twenty"
 echo "  tags: ${FULL_TAG} ${SHORT_TAG}"

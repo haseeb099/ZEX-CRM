@@ -81,12 +81,22 @@ EXPECT_PLATFORM_UNAVAILABLE=1 CRM_AUTH_HEADER='...' CRM_BASE_URL=... \
   node zex/deploy/scripts/smoke-production.cjs
 ```
 
-## Backups
+## Backups / restore
 
 ```bash
 PG_DATABASE_URL=postgres://... ./zex/deploy/scripts/backup-postgres.sh --out-dir /secure/backups
-PG_DATABASE_URL=postgres://.../disposable_db ./zex/deploy/scripts/restore-postgres.sh ./zex-backups/....sql.gz
+
+# Disposable restore (default path)
+RESTORE_DATABASE_URL=postgres://.../zex_crm_restore_tmp \
+PRODUCTION_DATABASE_URL=postgres://.../default \
+  ./zex/deploy/scripts/restore-postgres.sh ./zex-backups/....sql.gz
+
+# Production restore is never default — requires both:
+#   ALLOW_PRODUCTION_RESTORE=true
+#   CONFIRM_PHRASE=RESTORE_PRODUCTION_CONFIRM
 ```
+
+Production image builds refuse dirty git trees (fail-closed).
 
 Postgres backup does **not** cover Redis or object/`server-local-data` files.
 

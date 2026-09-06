@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
-# Restore a ZEX-CRM Postgres dump into a disposable database.
-# Refuses to restore into production-looking DB names unless forced.
+# Restore a ZEX-CRM Postgres dump into a disposable database by default.
+#
+# Required:
+#   RESTORE_DATABASE_URL  — restore target (prefer disposable)
+# Optional:
+#   PRODUCTION_DATABASE_URL — canonical production URL for equality checks
+#   ALLOW_PRODUCTION_RESTORE=true
+#   CONFIRM_PHRASE=RESTORE_PRODUCTION_CONFIRM
 #
 # Usage:
-#   PG_DATABASE_URL=postgres://.../zex_crm_restore_tmp \
+#   RESTORE_DATABASE_URL=postgres://.../zex_crm_restore_tmp \
 #     ./zex/deploy/scripts/restore-postgres.sh ./zex-backups/zex-crm-pg-....sql.gz
 #
-# Never points at live production by default.
+# Destructive production restore is never the default.
+# Any SQL statement failure aborts the restore (psql ON_ERROR_STOP).
 
 set -euo pipefail
 
-FORCE=0
 DUMP_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --force)
-      FORCE=1
-      shift
+      echo "--force is removed; use ALLOW_PRODUCTION_RESTORE + CONFIRM_PHRASE against PRODUCTION_DATABASE_URL" >&2
+      exit 1
       ;;
     *)
       DUMP_PATH="$1"
@@ -26,8 +32,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${PG_DATABASE_URL:-}" ]]; then
-  echo "PG_DATABASE_URL is required (target disposable DB)" >&2
+# Prefer explicit restore URL; allow legacy PG_DATABASE_URL as restore target alias.
+RESTORE_DATABASE_URL="${RESTORE_DATABASE_URL:-${PG_DATABASE_URL:-}}"
+
+if [[ -z "${RESTORE_DATABASE_URL}" ]]; then
+  echo "RESTORE_DATABASE_URL is required (disposable restore target)" >&2
   exit 1
 fi
 if [[ -z "${DUMP_PATH}" ]] || [[ ! -f "${DUMP_PATH}" ]]; then
@@ -38,18 +47,26 @@ if ! command -v psql >/dev/null 2>&1; then
   echo "psql is required" >&2
   exit 1
 fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "node is required" >&2
+  exit 1
+fi
+if ! command -v gzip >/dev/null 2>&1; then
+  echo "gzip is required" >&2
+  exit 1
+fi
 
-DB_NAME="$(printf '%s' "${PG_DATABASE_URL}" | sed -E 's#.*/([^/?]+).*#\1#')"
-case "${DB_NAME}" in
-  *prod*|*production*|*live*)
-    if [[ "${FORCE}" != "1" ]]; then
-      echo "Refusing restore into database name '${DB_NAME}' without --force" >&2
-      echo "Restore into a disposable DB first, verify workspace/object data, then plan cutover." >&2
-      exit 1
-    fi
-    ;;
-esac
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-echo "Restoring ${DUMP_PATH} into ${DB_NAME}"
-gzip -dc "${DUMP_PATH}" | psql "${PG_DATABASE_URL}"
+# URL-equality gate (not hostname/database-name heuristics).
+node "${ROOT_DIR}/zex/deploy/scripts/restore-safety.cjs" gate \
+  --restore-url "${RESTORE_DATABASE_URL}" \
+  --production-url "${PRODUCTION_DATABASE_URL:-}" \
+  --allow "${ALLOW_PRODUCTION_RESTORE:-false}" \
+  --confirm "${CONFIRM_PHRASE:-}"
+
+echo "Restoring ${DUMP_PATH} into restore target (URL redacted)"
+# Fail immediately on any SQL statement error.
+gzip -dc "${DUMP_PATH}" | psql -v ON_ERROR_STOP=1 "${RESTORE_DATABASE_URL}"
 echo "Restore complete. Verify workspace/object data before any production cutover."
+echo "Note: Postgres restore does not restore object/file storage (server-local-data / S3)."
