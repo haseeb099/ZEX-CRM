@@ -77,19 +77,48 @@ Staging and production must use **different** secrets.
 
 ## 5. Compose deploy
 
+Production order (fail-closed):
+
+```text
+backup
+→ ZEX migration/upgrade gate
+→ verify gate exit 0
+→ compose up (server+worker with DISABLE_DB_MIGRATIONS=true)
+→ ZEX readiness gate (liveness + Postgres + Redis)
+→ authenticated smoke
+→ promote
+```
+
 ```bash
 export ZEX_CRM_IMAGE=zex-crm:<full-git-sha>
+
+# 1) Pre-deploy backup (see §7)
+# 2) Fail-closed migration gate (does NOT start the long-running server)
+./zex/deploy/scripts/run-production-migration-gate.sh \
+  --compose zex/deploy/docker-compose.production.yml \
+  --env-file zex/deploy/.env.production
+
+# 3) Start server + worker (migrations disabled on both)
 docker compose \
   -f zex/deploy/docker-compose.production.yml \
   --env-file zex/deploy/.env.production \
   up -d
+
+# 4) Readiness (NOT the same as /healthz)
+CRM_BASE_URL="$SERVER_URL" \
+EXPECTED_IMAGE="$ZEX_CRM_IMAGE" \
+DOCKER_COMPOSE_FILE=zex/deploy/docker-compose.production.yml \
+DOCKER_COMPOSE_ENV_FILE=zex/deploy/.env.production \
+  node zex/deploy/scripts/check-production-readiness.cjs
 ```
 
 Guarantees:
 
 - `server` and `worker` use the **same** `ZEX_CRM_IMAGE` reference.
-- Worker sets `DISABLE_DB_MIGRATIONS=true` and `DISABLE_CRON_JOBS_REGISTRATION=true`.
-- Server healthcheck probes `/healthz` before worker starts (`depends_on: service_healthy`).
+- Both set `DISABLE_DB_MIGRATIONS=true` — production boot never migrates.
+- Worker also sets `DISABLE_CRON_JOBS_REGISTRATION=true`.
+- Compose `healthcheck` probes `/healthz` (process **liveness** only).
+- Promotion requires the ZEX readiness gate (Postgres + Redis + liveness).
 
 Validate first:
 
@@ -99,28 +128,35 @@ node zex/deploy/scripts/validate-production-config.cjs
 
 ## 6. Migrations / startup model
 
-Upstream entrypoint: `packages/twenty-docker/twenty/entrypoint.sh`.
+Upstream entrypoint (`packages/twenty-docker/twenty/entrypoint.sh`) treats
+`cache:flush` / `upgrade` failures as **warnings** and continues startup.
+That is **not** acceptable as the ZEX production promotion gate.
 
-On **server** (migrations enabled):
+ZEX therefore owns a fail-closed pre-deploy gate:
 
-1. Detect empty DB → `yarn database:init:prod` when needed.
-2. `yarn command:prod cache:flush`
-3. `yarn command:prod upgrade`
-4. Register cron jobs (`cron:register:all`) unless disabled.
-5. `exec` main process (`node dist/main`).
+`zex/deploy/scripts/production-migration-gate.cjs`
+(wrapper: `zex/deploy/scripts/run-production-migration-gate.sh`)
 
-On **worker**:
+Exact Twenty production commands invoked by the gate:
 
-- Migrations disabled — no race with server.
-- Starts only after server healthcheck passes.
+1. Detect empty DB (`core` schema missing) → `yarn database:init:prod` when needed
+2. `yarn command:prod cache:flush` (requires log line `Cache flushed`; bounded timeout)
+3. `yarn command:prod upgrade` (requires `Upgrade summary` with `0 workspace(s) failed`)
+4. `yarn command:prod cache:flush` again
 
-Failure visibility:
+Any non-zero exit, missing success marker, or timeout → gate exits non-zero and
+**blocks promotion**. Development commands (`migrate:dev`, `database:reset`, …)
+are refused.
 
-- Entrypoint logs migration/upgrade output.
-- Compose marks server unhealthy until `/healthz` succeeds (`retries` + `start_period`).
-- Do not route traffic until server is healthy.
+`cache:flush` boots the full Nest command app (imports `AppModule`) and needs a
+reachable `REDIS_URL`. A wrong Redis URL can hang Nest bootstrap for a long
+time — the gate therefore enforces `ZEX_MIGRATION_GATE_TIMEOUT_MS` (default 300s)
+and treats timeout as failure. Do not skip `cache:flush`: upgrade can leave
+stale workspace/metadata cache; the command is part of the pinned upstream
+entrypoint sequence and remains required for ZEX promotion.
 
-Do not invent a parallel migration engine.
+After the gate passes, start server + worker with migrations disabled so boot
+cannot race or swallow upgrade failures.
 
 ## 7. Postgres backup policy
 
@@ -161,19 +197,31 @@ Requirements:
 - Redis is **not** a substitute for CRM DB backup.
 - Flushing Redis is acceptable for cache recovery; it does not restore CRM rows.
 
-## 10. Health
+## 10. Health vs readiness
+
+| Check | Meaning |
+| --- | --- |
+| `GET /healthz` | Process **liveness** only (`health.check([])`). Stays 200 when DB/Redis are down. |
+| `check-production-readiness.cjs` | Production **promotion** health: `/healthz` + Postgres + Redis (+ worker/image when configured). |
 
 ```bash
+# Liveness only — do not treat as DB/Redis readiness
 curl -f "$SERVER_URL/healthz"
-docker compose -f zex/deploy/docker-compose.production.yml ps
+
+# Promotion gate
+CRM_BASE_URL="$SERVER_URL" \
+PG_DATABASE_URL=... \
+REDIS_URL=... \
+EXPECTED_IMAGE="$ZEX_CRM_IMAGE" \
+DOCKER_COMPOSE_FILE=zex/deploy/docker-compose.production.yml \
+  node zex/deploy/scripts/check-production-readiness.cjs
 ```
 
-Expect:
+Required readiness outcomes:
 
-- server healthy
-- db healthy
-- redis healthy
-- worker running (depends on healthy server)
+- CRM process alive + DB down → **FAIL**
+- CRM process alive + Redis down → **FAIL**
+- CRM + DB + Redis healthy → **PASS**
 
 ## 11. Production smoke
 
@@ -200,9 +248,10 @@ Checklist covered by helper + manual browser pass:
 
 Platform unavailable drill:
 
-1. Confirm CRM `/healthz` still ok.
-2. `EXPECT_PLATFORM_UNAVAILABLE=1` + auth → bridge endpoints fail gracefully.
-3. Restore Platform; Retry / re-smoke succeeds.
+1. Confirm CRM `/healthz` still ok (**liveness** — expected even if Platform is down).
+2. Confirm ZEX readiness still passes while Platform is down (Postgres/Redis unchanged).
+3. `EXPECT_PLATFORM_UNAVAILABLE=1` + auth → bridge endpoints fail gracefully.
+4. Restore Platform; Retry / re-smoke succeeds.
 
 Helper exits **non-zero** on failures.
 

@@ -34,8 +34,10 @@ services:
       ZEX_PLATFORM_ADMIN_API_KEY: ${ZEX_PLATFORM_ADMIN_API_KEY:?}
       # Intentionally unset: ZEX_PLATFORM_TENANT_ID (workspace→tenant lookup is authoritative)
 
+      # Migrations/upgrades run via zex/deploy fail-closed gate BEFORE boot.
+      # Server must not migrate during normal production start.
+      DISABLE_DB_MIGRATIONS: 'true'
       # Optional — uncomment only when values are set (empty strings fail Twenty validation):
-      # DISABLE_DB_MIGRATIONS: ${DISABLE_DB_MIGRATIONS}
       # DISABLE_CRON_JOBS_REGISTRATION: ${DISABLE_CRON_JOBS_REGISTRATION}
       # FALLBACK_ENCRYPTION_KEY: ${FALLBACK_ENCRYPTION_KEY}
       # STORAGE_S3_REGION: ${STORAGE_S3_REGION}
@@ -81,7 +83,7 @@ services:
       PG_DATABASE_URL: postgres://${PG_DATABASE_USER:?}:${PG_DATABASE_PASSWORD:?}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/${PG_DATABASE_NAME:-default}
       SERVER_URL: ${SERVER_URL:?}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      # Migrations and cron registration run once on server entrypoint.
+      # Migrations run via ZEX pre-deploy gate; worker never migrates.
       DISABLE_DB_MIGRATIONS: 'true'
       DISABLE_CRON_JOBS_REGISTRATION: 'true'
 

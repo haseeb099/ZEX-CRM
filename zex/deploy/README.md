@@ -52,18 +52,37 @@ Do **not** set `ZEX_PLATFORM_TENANT_ID`.
 ```bash
 node zex/deploy/scripts/validate-production-config.cjs
 node --test zex/deploy/__tests__/production-config.test.cjs
+node --test zex/deploy/__tests__/migration-and-readiness.test.cjs
 ```
 
-## Run (local production-parity)
+## Production sequence
+
+```text
+backup
+→ fail-closed migration gate
+→ compose up (DISABLE_DB_MIGRATIONS=true on server + worker)
+→ readiness gate (/healthz liveness + Postgres + Redis)
+→ authenticated smoke
+→ promote
+```
 
 ```bash
+./zex/deploy/scripts/run-production-migration-gate.sh \
+  --compose zex/deploy/docker-compose.production.yml \
+  --env-file zex/deploy/.env.production
+
 docker compose \
   -f zex/deploy/docker-compose.production.yml \
   --env-file zex/deploy/.env.production \
   up -d
+
+CRM_BASE_URL=http://localhost:3000 \
+EXPECTED_IMAGE="$ZEX_CRM_IMAGE" \
+DOCKER_COMPOSE_FILE=zex/deploy/docker-compose.production.yml \
+  node zex/deploy/scripts/check-production-readiness.cjs
 ```
 
-Server and worker always use the **same** `ZEX_CRM_IMAGE`.
+`/healthz` is process **liveness** only. Do not treat it as DB/Redis readiness.
 
 ## Smoke
 

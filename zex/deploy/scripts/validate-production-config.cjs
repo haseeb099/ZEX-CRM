@@ -127,14 +127,18 @@ const validateCompose = (composeText) => {
   if (/^\s*ZEX_PLATFORM_TENANT_ID\s*:/m.test(composeText)) {
     errors.push('compose must not set ZEX_PLATFORM_TENANT_ID');
   }
-  if (
-    !composeText.includes("DISABLE_DB_MIGRATIONS: 'true'") &&
-    !composeText.includes('DISABLE_DB_MIGRATIONS: "true"')
-  ) {
-    errors.push('worker must disable DB migrations (server owns migrations)');
+  const disableMigrationMatches = composeText.match(
+    /DISABLE_DB_MIGRATIONS:\s*['"]true['"]/g,
+  );
+  if (!disableMigrationMatches || disableMigrationMatches.length < 2) {
+    errors.push(
+      'server and worker must both set DISABLE_DB_MIGRATIONS=true (migrations run via ZEX pre-deploy gate)',
+    );
   }
   if (!/healthz/.test(composeText)) {
-    errors.push('server healthcheck must probe /healthz');
+    errors.push(
+      'server healthcheck must probe /healthz (liveness only; use ZEX readiness gate for DB/Redis)',
+    );
   }
 
   // Browser secret leakage markers must not appear as frontend build args
