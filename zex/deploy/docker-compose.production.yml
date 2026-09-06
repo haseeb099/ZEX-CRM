@@ -1,0 +1,130 @@
+# ZEX-CRM production compose (provider-neutral).
+# Does NOT use twentycrm/twenty:latest.
+# Requires an immutable ZEX-built image via ZEX_CRM_IMAGE.
+#
+# Example:
+#   export ZEX_CRM_IMAGE=ghcr.io/example/zex-crm:c831e89e939b378e901014f59674dccea53e9d97
+#   docker compose -f zex/deploy/docker-compose.production.yml --env-file zex/deploy/.env.production up -d
+
+name: zex-crm
+
+services:
+  server:
+    image: ${ZEX_CRM_IMAGE:?ZEX_CRM_IMAGE must be set to an immutable ZEX-CRM image reference}
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    ports:
+      - '${SERVER_PUBLISH_PORT:-3000}:3000'
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:?}:${PG_DATABASE_PASSWORD:?}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/${PG_DATABASE_NAME:-default}
+      SERVER_URL: ${SERVER_URL:?}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+      # Twenty requires semver for APP_VERSION. Image tags carry the git SHA;
+      # build scripts bake APP_VERSION=0.0.0+<sha>. Override here if needed.
+      APP_VERSION: ${APP_VERSION:-0.0.0}
+
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      APP_SECRET: ${APP_SECRET:?}
+
+      # ZEX Platform bridge (server-only; never expose to browser builds)
+      ZEX_PLATFORM_BASE_URL: ${ZEX_PLATFORM_BASE_URL:?}
+      ZEX_PLATFORM_ADMIN_API_KEY: ${ZEX_PLATFORM_ADMIN_API_KEY:?}
+      # Intentionally unset: ZEX_PLATFORM_TENANT_ID (workspace→tenant lookup is authoritative)
+
+      # Optional — uncomment only when values are set (empty strings fail Twenty validation):
+      # DISABLE_DB_MIGRATIONS: ${DISABLE_DB_MIGRATIONS}
+      # DISABLE_CRON_JOBS_REGISTRATION: ${DISABLE_CRON_JOBS_REGISTRATION}
+      # FALLBACK_ENCRYPTION_KEY: ${FALLBACK_ENCRYPTION_KEY}
+      # STORAGE_S3_REGION: ${STORAGE_S3_REGION}
+      # STORAGE_S3_NAME: ${STORAGE_S3_NAME}
+      # STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
+      # STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID}
+      # STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY}
+      # AUTH_GOOGLE_ENABLED: ${AUTH_GOOGLE_ENABLED}
+      # AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID}
+      # AUTH_GOOGLE_CLIENT_SECRET: ${AUTH_GOOGLE_CLIENT_SECRET}
+      # AUTH_GOOGLE_CALLBACK_URL: ${AUTH_GOOGLE_CALLBACK_URL}
+      # AUTH_MICROSOFT_ENABLED: ${AUTH_MICROSOFT_ENABLED}
+      # AUTH_MICROSOFT_CLIENT_ID: ${AUTH_MICROSOFT_CLIENT_ID}
+      # AUTH_MICROSOFT_CLIENT_SECRET: ${AUTH_MICROSOFT_CLIENT_SECRET}
+      # AUTH_MICROSOFT_CALLBACK_URL: ${AUTH_MICROSOFT_CALLBACK_URL}
+      # EMAIL_DRIVER: ${EMAIL_DRIVER}
+      # EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      # EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      # EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST}
+      # EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT}
+      # EMAIL_SMTP_USER: ${EMAIL_SMTP_USER}
+      # EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    restart: unless-stopped
+
+  worker:
+    # Same immutable image as server — never diverge tags/digests.
+    image: ${ZEX_CRM_IMAGE:?ZEX_CRM_IMAGE must be set to an immutable ZEX-CRM image reference}
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    command: ['yarn', 'worker:prod']
+    environment:
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:?}:${PG_DATABASE_PASSWORD:?}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/${PG_DATABASE_NAME:-default}
+      SERVER_URL: ${SERVER_URL:?}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Migrations and cron registration run once on server entrypoint.
+      DISABLE_DB_MIGRATIONS: 'true'
+      DISABLE_CRON_JOBS_REGISTRATION: 'true'
+
+      APP_VERSION: ${APP_VERSION:-0.0.0}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
+      APP_SECRET: ${APP_SECRET:?}
+
+      ZEX_PLATFORM_BASE_URL: ${ZEX_PLATFORM_BASE_URL:?}
+      ZEX_PLATFORM_ADMIN_API_KEY: ${ZEX_PLATFORM_ADMIN_API_KEY:?}
+      # Intentionally unset: ZEX_PLATFORM_TENANT_ID
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${PG_DATABASE_NAME:-default}
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD:?}
+      POSTGRES_USER: ${PG_DATABASE_USER:?}
+    healthcheck:
+      test: pg_isready -U ${PG_DATABASE_USER:?} -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ['redis-server', '--maxmemory-policy', 'noeviction']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  server-local-data:
