@@ -20,7 +20,7 @@ describe('ZEX navigation shell', () => {
       ZEX_APP_PATH.Today,
       ZEX_APP_PATH.Prospects,
       ZEX_APP_PATH.Customers,
-      AppPath.OpportunitiesPage,
+      ZEX_APP_PATH.Pipeline,
       ZEX_APP_PATH.Agents,
     ]);
   });
@@ -49,12 +49,12 @@ describe('ZEX navigation shell', () => {
     expect(AppPath.ZexAgents).toBe(ZEX_APP_PATH.Agents);
   });
 
-  it('aliases Pipeline to native Opportunities rather than a custom board', () => {
+  it('aliases Pipeline through /zex/pipeline then native Opportunities', () => {
     const pipelineItem = ZEX_NAVIGATION_ITEMS.find(
       (item) => item.id === 'pipeline',
     );
 
-    expect(pipelineItem?.path).toBe(AppPath.OpportunitiesPage);
+    expect(pipelineItem?.path).toBe(ZEX_APP_PATH.Pipeline);
     expect(pipelineItem?.label).toBe('Pipeline');
   });
 });

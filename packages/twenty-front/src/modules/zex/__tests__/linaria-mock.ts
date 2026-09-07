@@ -15,14 +15,17 @@ const createComponent = (Tag: string | React.ElementType = 'div') => {
       }: {
         children?: React.ReactNode;
         className?: string;
-      },
+      } & Record<string, unknown>,
       ref: React.Ref<HTMLElement>,
     ) => {
       const Element = typeof Tag === 'string' ? Tag : 'div';
+      const safeProps = Object.fromEntries(
+        Object.entries(rest).filter(([key]) => !key.startsWith('$')),
+      );
 
       return React.createElement(
         Element,
-        { ref, className, ...rest },
+        { ref, className, ...safeProps },
         children,
       );
     },
@@ -51,5 +54,13 @@ export const linariaMock = {
     button: templateFactory('button'),
     ul: templateFactory('ul'),
     li: templateFactory('li'),
+    label: templateFactory('label'),
+    input: templateFactory('input'),
+    textarea: templateFactory('textarea'),
+    select: templateFactory('select'),
+    option: templateFactory('option'),
+    p: templateFactory('p'),
+    h2: templateFactory('h2'),
+    h3: templateFactory('h3'),
   }),
 };
