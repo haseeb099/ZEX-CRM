@@ -35,9 +35,11 @@ describe('ZexPlatformService', () => {
 
   const mockGet = jest.fn();
   const mockPost = jest.fn();
+  const mockPatch = jest.fn();
   const mockHttpClient = {
     get: mockGet,
     post: mockPost,
+    patch: mockPatch,
   };
 
   const secureHttpClientService = {
@@ -356,5 +358,264 @@ describe('ZexPlatformService', () => {
         expect(contents).not.toContain(forbiddenSecret);
       }
     }
+  });
+
+  it('proxies company brain list and create through workspace-resolved tenant', async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      })
+      .mockResolvedValueOnce({
+        data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          brains: [{ id: 'brain-1', companyName: 'Acme', status: 'ready' }],
+        },
+      });
+    mockPost.mockResolvedValueOnce({
+      data: { id: 'brain-2', companyName: 'Beta', status: 'draft' },
+    });
+
+    const created = await service.createCompanyBrain('workspace-a', {
+      companyName: 'Beta',
+      websiteUrl: 'https://beta.example',
+    });
+    const listed = await service.listCompanyBrains('workspace-a');
+
+    expect(created).toMatchObject({ id: 'brain-2' });
+    expect(listed.brains).toHaveLength(1);
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain',
+      { companyName: 'Beta', websiteUrl: 'https://beta.example' },
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain',
+    );
+    expect(JSON.stringify(created)).not.toContain('test-admin-key');
+  });
+
+  it('proxies company brain analyze, job poll, patch, and regenerate', async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path.includes('/by-workspace/')) {
+        return Promise.resolve({
+          data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+        });
+      }
+
+      if (path.includes('/analysis-jobs/')) {
+        return Promise.resolve({ data: { status: 'completed' } });
+      }
+
+      return Promise.resolve({ data: {} });
+    });
+    mockPost
+      .mockResolvedValueOnce({
+        data: {
+          companyBrainId: 'brain-1',
+          analysisJobId: 'job-1',
+          status: 'queued',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: { id: 'brain-1', status: 'analyzing' },
+      });
+    mockPatch.mockResolvedValueOnce({
+      data: { id: 'brain-1', status: 'ready' },
+    });
+
+    await service.analyzeCompanyBrain('workspace-a', 'brain-1', {});
+    await service.getCompanyBrainAnalysisJob('workspace-a', 'brain-1', 'job-1');
+    await service.patchCompanyBrain('workspace-a', 'brain-1', {
+      messagingSummary: 'Updated',
+    });
+    await service.regenerateCompanyBrain('workspace-a', 'brain-1');
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain/brain-1/analyze',
+      {},
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain/brain-1/analysis-jobs/job-1',
+    );
+    expect(mockPatch).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain/brain-1',
+      { messagingSummary: 'Updated' },
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/company-brain/brain-1/regenerate',
+    );
+  });
+
+  it('proxies discovery start/poll and candidate mutations', async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path.includes('/by-workspace/')) {
+        return Promise.resolve({
+          data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+        });
+      }
+
+      if (path.endsWith('/prospect-discovery/run-1')) {
+        return Promise.resolve({
+          data: {
+            id: 'run-1',
+            status: 'completed',
+            candidates: [{ id: 'cand-1', companyName: 'Acme' }],
+          },
+        });
+      }
+
+      if (path.includes('/prospect-discovery/candidates/cand-1')) {
+        return Promise.resolve({
+          data: { id: 'cand-1', status: 'PROPOSED' },
+        });
+      }
+
+      return Promise.resolve({ data: {} });
+    });
+    mockPost
+      .mockResolvedValueOnce({
+        data: {
+          id: 'run-1',
+          status: 'queued',
+          companyBrainId: 'brain-1',
+        },
+      })
+      .mockResolvedValueOnce({ data: { id: 'cand-1', status: 'APPROVED' } })
+      .mockResolvedValueOnce({ data: { id: 'cand-1', status: 'REJECTED' } })
+      .mockResolvedValueOnce({
+        data: {
+          id: 'cand-1',
+          status: 'CREATED',
+          createdTwentyCompanyId: 'co-1',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          id: 'cand-1',
+          status: 'CREATED',
+          createdTwentyCompanyId: 'co-1',
+        },
+      });
+
+    const queued = await service.startProspectDiscovery('workspace-a', {
+      companyBrainId: 'brain-1',
+      limit: 10,
+    });
+    const run = await service.getProspectDiscoveryRun('workspace-a', 'run-1');
+    const candidate = await service.getProspectCandidate(
+      'workspace-a',
+      'cand-1',
+    );
+
+    await service.approveProspectCandidate('workspace-a', 'cand-1');
+    await service.rejectProspectCandidate('workspace-a', 'cand-1');
+    await service.createProspectCandidateInCrm('workspace-a', 'cand-1');
+    await service.retryCreateProspectCandidate('workspace-a', 'cand-1');
+
+    expect(queued.id).toBe('run-1');
+    expect(run.status).toBe('completed');
+    expect(candidate.id).toBe('cand-1');
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery',
+      { companyBrainId: 'brain-1', limit: 10 },
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery/run-1',
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery/candidates/cand-1/approve',
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery/candidates/cand-1/reject',
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery/candidates/cand-1/create',
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospect-discovery/candidates/cand-1/retry-create',
+    );
+  });
+
+  it('proxies why-now and research without accepting browser tenantId', async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path.includes('/by-workspace/')) {
+        return Promise.resolve({
+          data: { tenantId: 'tenant-a', workspaceId: 'workspace-a' },
+        });
+      }
+
+      if (path.endsWith('/why-now')) {
+        return Promise.resolve({
+          data: { overallScore: 82, whyNow: 'Hiring surge' },
+        });
+      }
+
+      if (path.endsWith('/research/latest')) {
+        return Promise.resolve({
+          data: { status: 'COMPLETED', companySummary: 'Summary' },
+        });
+      }
+
+      if (path.endsWith('/research/res-1')) {
+        return Promise.resolve({
+          data: { status: 'PROCESSING', researchRunId: 'res-1' },
+        });
+      }
+
+      return Promise.resolve({ data: {} });
+    });
+    mockPost
+      .mockResolvedValueOnce({
+        data: { overallScore: 90, whyNow: 'Funding news' },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          status: 'queued',
+          researchRunId: 'res-1',
+          prospectCandidateId: 'cand-1',
+        },
+      });
+
+    await service.scoreProspectWhyNow('workspace-a', 'cand-1', { sync: true });
+    await service.getProspectWhyNow('workspace-a', 'cand-1');
+    await service.startProspectResearch('workspace-a', 'cand-1', {});
+    await service.getProspectResearchLatest('workspace-a', 'cand-1');
+    await service.getProspectResearchRun('workspace-a', 'cand-1', 'res-1');
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospects/cand-1/why-now',
+      { sync: true },
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospects/cand-1/why-now',
+    );
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospects/cand-1/research',
+      {},
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospects/cand-1/research/latest',
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/admin/tenants/tenant-a/prospects/cand-1/research/res-1',
+    );
+
+    const allCalls = JSON.stringify([
+      ...mockGet.mock.calls,
+      ...mockPost.mock.calls,
+    ]);
+
+    expect(allCalls).not.toContain('browser-tenant');
+    expect(allCalls).not.toContain('tenantId=');
+  });
+
+  it('never accepts a browser-supplied tenantId argument on prospects methods', () => {
+    expect(service.startProspectDiscovery.length).toBe(2);
+    expect(service.approveProspectCandidate.length).toBe(2);
+    // Defaulted request body args are not counted by Function.length.
+    expect(service.scoreProspectWhyNow.length).toBe(2);
+    expect(service.startProspectResearch.length).toBe(2);
+    expect(service.createCompanyBrain.length).toBe(2);
   });
 });

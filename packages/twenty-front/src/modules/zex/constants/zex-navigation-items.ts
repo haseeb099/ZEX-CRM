@@ -1,4 +1,3 @@
-import { AppPath } from 'twenty-shared/types';
 import {
   IconBuildingSkyscraper,
   IconLego,
@@ -47,8 +46,8 @@ export const ZEX_NAVIGATION_ITEMS: ZexNavigationItem[] = [
   {
     id: 'pipeline',
     label: 'Pipeline',
-    // Alias to native Opportunities so we do not rebuild the pipeline UI.
-    path: AppPath.OpportunitiesPage,
+    // Own ZEX path redirects to Opportunities — avoids dual-active with native Opportunities nav.
+    path: ZEX_APP_PATH.Pipeline,
     Icon: IconTargetArrow,
   },
   {

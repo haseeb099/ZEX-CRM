@@ -189,3 +189,182 @@ export type ZexPlatformAgentUndoResponse = {
   state: ZexPlatformAgentControlState;
   auditLogId?: string;
 };
+
+// Company Brain / Prospect Discovery / Why-Now / Research (ZEX Prospects)
+
+export type ZexPlatformCompanyBrainStatus =
+  | 'draft'
+  | 'analyzing'
+  | 'ready'
+  | 'failed';
+
+export type ZexPlatformCompanyBrainSummary = {
+  id: string;
+  companyName: string;
+  websiteUrl?: string | null;
+  status: ZexPlatformCompanyBrainStatus | string;
+  version?: number | string;
+  lastAnalyzedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ZexPlatformCompanyBrainListResponse = {
+  brains: ZexPlatformCompanyBrainSummary[];
+};
+
+export type ZexPlatformCreateCompanyBrainRequest = {
+  companyName: string;
+  websiteUrl?: string;
+  extraUrls?: string[];
+  pastedText?: string;
+  documentText?: string;
+  analyze?: boolean;
+  sync?: boolean;
+};
+
+export type ZexPlatformCompanyBrainSourceType =
+  | 'WEBSITE'
+  | 'URL'
+  | 'PASTED_TEXT'
+  | 'DOCUMENT_TEXT';
+
+export type ZexPlatformAddCompanyBrainSourceRequest = {
+  sourceType: ZexPlatformCompanyBrainSourceType;
+  sourceUrl?: string;
+  title?: string;
+  text?: string;
+};
+
+export type ZexPlatformPatchCompanyBrainRequest = {
+  companyName?: string;
+  websiteUrl?: string;
+  icp?: Record<string, unknown>;
+  personas?: unknown[];
+  painPoints?: unknown[];
+  competitors?: unknown[];
+  qualificationRules?: unknown[];
+  messagingSummary?: string;
+};
+
+export type ZexPlatformDiscoveryRunStatus =
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'failed';
+
+export type ZexPlatformStartDiscoveryRequest = {
+  companyBrainId: string;
+  limit?: number;
+  sync?: boolean;
+};
+
+export type ZexPlatformDiscoveryRunQueuedResponse = {
+  id: string;
+  status: ZexPlatformDiscoveryRunStatus | string;
+  bullJobId?: string;
+  companyBrainId: string;
+};
+
+export type ZexPlatformProspectCandidateStatus =
+  | 'PROPOSED'
+  | 'DUPLICATE'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CREATED'
+  | 'FAILED';
+
+export type ZexPlatformProspectDedupeStatus =
+  | 'NEW'
+  | 'EXACT_MATCH'
+  | 'POSSIBLE_MATCH';
+
+export type ZexPlatformProspectCandidate = {
+  id: string;
+  companyName?: string | null;
+  domain?: string | null;
+  websiteUrl?: string | null;
+  industry?: string | null;
+  companySize?: string | null;
+  geography?: string | null;
+  description?: string | null;
+  fitScore?: number | null;
+  fitBand?: string | null;
+  fitReasons?: unknown;
+  disqualifiers?: unknown;
+  status?: ZexPlatformProspectCandidateStatus | string;
+  dedupeStatus?: ZexPlatformProspectDedupeStatus | string;
+  existingTwentyCompanyId?: string | null;
+  createdTwentyCompanyId?: string | null;
+  evidence?: unknown;
+  buyerRoles?: unknown;
+  lastError?: string | null;
+  discoveryRunId?: string | null;
+  [key: string]: unknown;
+};
+
+export type ZexPlatformDiscoveryRunResponse = {
+  id: string;
+  status: ZexPlatformDiscoveryRunStatus | string;
+  companyBrainId?: string;
+  candidateSummary?: Record<string, unknown>;
+  candidates?: ZexPlatformProspectCandidate[];
+  lastError?: string | null;
+  [key: string]: unknown;
+};
+
+export type ZexPlatformWhyNowRequest = {
+  sync?: boolean;
+  collectSignals?: boolean;
+};
+
+export type ZexPlatformWhyNowSnapshot = {
+  fitScore?: number | null;
+  intentScore?: number | null;
+  timingScore?: number | null;
+  overallScore?: number | null;
+  confidence?: number | null;
+  whyNow?: string | null;
+  fitReasons?: unknown;
+  intentReasons?: unknown;
+  timingReasons?: unknown;
+  signalIds?: unknown;
+  scoringVersion?: string | null;
+  signals?: unknown[];
+  [key: string]: unknown;
+};
+
+export type ZexPlatformResearchRequest = {
+  sync?: boolean;
+};
+
+export type ZexPlatformResearchQueuedResponse = {
+  status: string;
+  jobId?: string;
+  researchRunId: string;
+  prospectCandidateId: string;
+};
+
+export type ZexPlatformResearchRunStatus =
+  | 'QUEUED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'BLOCKED';
+
+export type ZexPlatformResearchPackage = {
+  status?: ZexPlatformResearchRunStatus | string;
+  companySummary?: string | null;
+  whyRelevant?: string | null;
+  whyNow?: string | null;
+  whyNowSnapshotId?: string | null;
+  keyFindings?: unknown;
+  buyingCommitteeContext?: unknown;
+  risksObjections?: unknown;
+  outreachContext?: unknown;
+  confidence?: number | null;
+  researchVersion?: string | null;
+  findingIds?: unknown;
+  doNotClaim?: unknown;
+  [key: string]: unknown;
+};

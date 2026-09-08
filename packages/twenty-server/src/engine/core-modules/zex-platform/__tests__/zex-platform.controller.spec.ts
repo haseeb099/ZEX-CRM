@@ -125,7 +125,9 @@ describe('ZexPlatformController agent control actor integrity', () => {
     );
     const undoBlock = contents.slice(
       contents.indexOf("Post('agent-actions/:actionId/undo')"),
-      contents.indexOf("Post('actions/prospects/:candidateId/approve')"),
+      contents.indexOf("Get('company-brains')") !== -1
+        ? contents.indexOf("Get('company-brains')")
+        : contents.indexOf("Post('actions/prospects/:candidateId/approve')"),
     );
 
     for (const block of [pauseBlock, resumeBlock, undoBlock]) {
